@@ -20,6 +20,14 @@ func routes() http.Handler {
 	mux.Get("/", handlers.Repo.LoginScreen)
 	mux.Post("/", handlers.Repo.Login)
 
+	mux.Get("/pusher-test", handlers.Repo.PusherTest)
+
+	mux.Route("/pusher", func(mux chi.Router) {
+		mux.Use(Auth)
+
+		mux.Post("/auth", handlers.Repo.PusherAuth)
+	})
+
 	mux.Get("/user/logout", handlers.Repo.Logout)
 
 	// admin routes

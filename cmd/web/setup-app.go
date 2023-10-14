@@ -124,7 +124,7 @@ func setupApp() (*string, error) {
 
 	app.PreferenceMap = preferenceMap
 
-	// create pusher client
+	// create a pusher client
 	wsClient = pusher.Client{
 		AppID:  *pusherApp,
 		Secret: *pusherSecret,

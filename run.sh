@@ -4,6 +4,7 @@
 # run ./vigilate -help
 
 go build -o vigilate cmd/web/*.go && ./vigilate \
+-db='postgres' \
 -dbuser='postgres' \
 -dbpass='postgres' \
 -pusherHost='localhost' \

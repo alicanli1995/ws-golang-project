@@ -39,3 +39,42 @@ type Preference struct {
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
+
+// Host model
+type Host struct {
+	ID            int
+	HostName      string
+	CanonicalName string
+	URL           string
+	IP            string
+	IPV6          string
+	Location      string
+	OS            string
+	Active        int
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+// Services model
+type Services struct {
+	ID          int
+	ServiceName string
+	Active      int
+	Icon        string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// HostServices model
+type HostServices struct {
+	ID              int
+	HostID          int
+	ServiceID       int
+	Active          int
+	SchedulerNumber int
+	SchedulerUnit   string
+	Status          string
+	LastCheck       time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}

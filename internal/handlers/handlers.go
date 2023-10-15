@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/CloudyKit/jet/v6"
 	"github.com/go-chi/chi"
@@ -119,7 +120,15 @@ func (repo *DBRepo) PostSettings(w http.ResponseWriter, r *http.Request) {
 
 // AllHosts displays list of all hosts
 func (repo *DBRepo) AllHosts(w http.ResponseWriter, r *http.Request) {
-	err := helpers.RenderPage(w, r, "hosts", nil, nil)
+	hosts, err := repo.DB.AllHosts()
+	if err != nil {
+		ClientError(w, r, http.StatusBadRequest)
+		return
+	}
+
+	vars := make(jet.VarMap)
+	vars.Set("hosts", hosts)
+	err = helpers.RenderPage(w, r, "hosts", vars, nil)
 	if err != nil {
 		printTemplateError(w, err)
 	}
@@ -128,13 +137,19 @@ func (repo *DBRepo) AllHosts(w http.ResponseWriter, r *http.Request) {
 // Host shows the host add/edit form
 func (repo *DBRepo) Host(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
-	var host models.Host
+	var h models.Host
 	if id > 0 {
-		// get host from db
+		host, err := repo.DB.FindHostByID(id)
+		if err != nil {
+			log.Println(err)
+			ClientError(w, r, http.StatusBadRequest)
+			return
+		}
+		h = host
 	}
 
 	vars := make(jet.VarMap)
-	vars.Set("host", host)
+	vars.Set("host", h)
 
 	err := helpers.RenderPage(w, r, "host", vars, nil)
 	if err != nil {
@@ -148,32 +163,69 @@ func (repo *DBRepo) PostHost(w http.ResponseWriter, r *http.Request) {
 	var host models.Host
 	var hostID int
 
-	if id > 0 {
-		// get host from db
-	} else {
-		host.HostName = r.Form.Get("host_name")
-		host.CanonicalName = r.Form.Get("canonical_name")
-		host.URL = r.Form.Get("url")
-		host.IP = r.Form.Get("ip")
-		host.IPV6 = r.Form.Get("ipv6")
-		host.Location = r.Form.Get("location")
-		host.OS = r.Form.Get("os")
-		active, _ := strconv.Atoi(r.Form.Get("host_active"))
-		host.Active = active
+	host.HostName = r.Form.Get("host_name")
+	host.CanonicalName = r.Form.Get("canonical_name")
+	host.URL = r.Form.Get("url")
+	host.IP = r.Form.Get("ip")
+	host.IPV6 = r.Form.Get("ipv6")
+	host.Location = r.Form.Get("location")
+	host.OS = r.Form.Get("os")
+	active, _ := strconv.Atoi(r.Form.Get("active"))
+	host.Active = active
 
-		host, err := repo.DB.InsertHost(host)
+	if id > 0 {
+		log.Println("updating host")
+		host.ID = id
+		err := repo.DB.UpdateHost(host)
 		if err != nil {
 			log.Println(err)
 			ClientError(w, r, http.StatusBadRequest)
 			return
 		}
-
-		hostID = host
+		hostID = id
+	} else {
+		log.Println("inserting host")
+		ID, err := repo.DB.InsertHost(host)
+		if err != nil {
+			log.Println(err)
+			ClientError(w, r, http.StatusBadRequest)
+			return
+		}
+		hostID = ID
 	}
 
 	repo.App.Session.Put(r.Context(), "flash", "Changes saved")
 	http.Redirect(w, r, "/admin/host/"+strconv.Itoa(hostID), http.StatusSeeOther)
 
+}
+
+type ServiceJSON struct {
+	OK bool `json:"ok"`
+}
+
+func (repo *DBRepo) ToggleHostService(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		log.Println(err)
+		ClientError(w, r, http.StatusBadRequest)
+		return
+	}
+
+	hostID, _ := strconv.Atoi(r.Form.Get("host_id"))
+	serviceID, _ := strconv.Atoi(r.Form.Get("service_id"))
+	active, _ := strconv.Atoi(r.Form.Get("active"))
+
+	var response ServiceJSON
+	response.OK = true
+	err = repo.DB.UpdateHostServiceStatus(hostID, serviceID, active)
+	if err != nil {
+		log.Println(err)
+		response.OK = false
+	}
+
+	out, _ := json.MarshalIndent(response, "", "    ")
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(out)
 }
 
 // AllUsers lists all admin users

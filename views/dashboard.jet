@@ -35,7 +35,8 @@
         <div class="card border-success mb-4" style="border: 1px solid red;">
             <div class="card-body text-success">{{no_healthy}} Healthy service{{if no_healthy != 1}}s{{end}}</div>
             <div class="card-footer d-flex align-items-center justify-content-between">
-                <a class="small text-success stretched-link" href="/admin/all-healthy">View Details</a>
+                <a class="small text-success stretched-link" href="/admin/all-healthy">View
+                    Details</a>
                 <div class="small text-success"><i class="fas fa-angle-right"></i></div>
             </div>
         </div>
@@ -87,7 +88,24 @@
             </tr>
             </thead>
             <tbody>
-
+            {{range hosts}}
+            <tr>
+                <td><a href="/admin/host/{{.ID}}">{{.HostName}}</a></td>
+                <td>
+                    {{range .HostServices}}
+                    <span class="badge bg-info">{{.Service.ServiceName}}</span>
+                    {{end}}
+                </td>
+                <td>{{.OS}}</td>
+                <td>{{.Location}}</td>
+                <td>
+                    {{if .Active == 1}}
+                    <span class="badge bg-success">Active</span>
+                    {{else}}
+                    <span class="badge bg-danger">Inactive</span>
+                    {{end}}
+                </td>
+            {{end}}
             </tbody>
         </table>
     </div>

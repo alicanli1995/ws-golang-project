@@ -6,42 +6,54 @@
 
 
 {{block cardTitle()}}
-    Problem Services
+Problem Services
 {{end}}
 
 
 {{block cardContent()}}
-    <div class="row">
-        <div class="col">
-            <ol class="breadcrumb mt-1">
-                <li class="breadcrumb-item"><a href="/admin/overview">Overview</a></li>
-                <li class="breadcrumb-item active">Problem Services</li>
-            </ol>
-            <h4 class="mt-4">Problem Services</h4>
-            <hr>
-        </div>
-    </div>
+<div class="row">
+  <div class="col">
+    <ol class="breadcrumb mt-1">
+      <li class="breadcrumb-item"><a href="/admin/overview">Overview</a></li>
+      <li class="breadcrumb-item active">Problem Services</li>
+    </ol>
+    <h4 class="mt-4">Problem Services</h4>
+    <hr>
+  </div>
+</div>
 
-    <div class="row">
-        <div class="col">
+<div class="row">
+  <div class="col">
 
-            <table class="table table-condensed table-striped">
-                <thead>
-                <tr>
-                    <th>Host</th>
-                    <th>Service</th>
-                    <th>Status</th>
-                    <th>Message</th>
-                </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td colspan="5">No services</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <table class="table table-condensed table-striped">
+      <thead>
+      <tr>
+        <th>Host</th>
+        <th>Service</th>
+        <th>Status</th>
+        <th>Message</th>
+      </tr>
+      </thead>
+      <tbody>
+      {{range services}}
+      <tr>
+        <td>
+          <a href="/admin/host/{{.HostID}}#problem-content">
+            {{.HostName}}
+          </a>
+        </td>
+        <td>{{.Service.ServiceName}}</td>
+        <td>
+          <span class="badge bg-secondary-dark">{{.Status}}</span>
+        </td>
+        <td>
+        </td>
+      </tr>
+      {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
 
 {{end}}
 

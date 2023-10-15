@@ -127,10 +127,53 @@ func (repo *DBRepo) AllHosts(w http.ResponseWriter, r *http.Request) {
 
 // Host shows the host add/edit form
 func (repo *DBRepo) Host(w http.ResponseWriter, r *http.Request) {
-	err := helpers.RenderPage(w, r, "host", nil, nil)
+	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
+	var host models.Host
+	if id > 0 {
+		// get host from db
+	}
+
+	vars := make(jet.VarMap)
+	vars.Set("host", host)
+
+	err := helpers.RenderPage(w, r, "host", vars, nil)
 	if err != nil {
 		printTemplateError(w, err)
 	}
+}
+
+// PostHost adds a host
+func (repo *DBRepo) PostHost(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
+	var host models.Host
+	var hostID int
+
+	if id > 0 {
+		// get host from db
+	} else {
+		host.HostName = r.Form.Get("host_name")
+		host.CanonicalName = r.Form.Get("canonical_name")
+		host.URL = r.Form.Get("url")
+		host.IP = r.Form.Get("ip")
+		host.IPV6 = r.Form.Get("ipv6")
+		host.Location = r.Form.Get("location")
+		host.OS = r.Form.Get("os")
+		active, _ := strconv.Atoi(r.Form.Get("host_active"))
+		host.Active = active
+
+		host, err := repo.DB.InsertHost(host)
+		if err != nil {
+			log.Println(err)
+			ClientError(w, r, http.StatusBadRequest)
+			return
+		}
+
+		hostID = host
+	}
+
+	repo.App.Session.Put(r.Context(), "flash", "Changes saved")
+	http.Redirect(w, r, "/admin/host/"+strconv.Itoa(hostID), http.StatusSeeOther)
+
 }
 
 // AllUsers lists all admin users

@@ -35,6 +35,7 @@ Healthy Services
       </tr>
       </thead>
       <tbody>
+      {{if len(services) >0 }}
       {{range services}}
       <tr>
         <td>
@@ -49,6 +50,11 @@ Healthy Services
         <td>
         </td>
       </tr>
+      {{end}}
+      {{else}}
+        <tr>
+          <td colspan="4"> No Services </td>
+        </tr>
       {{end}}
       </tbody>
     </table>

@@ -35,6 +35,7 @@ Problem Services
       </tr>
       </thead>
       <tbody>
+      {{if len(services) >0 }}
       {{range services}}
       <tr>
         <td>
@@ -48,6 +49,11 @@ Problem Services
         </td>
         <td>
         </td>
+      </tr>
+      {{end}}
+      {{else}}
+      <tr>
+        <td colspan="4"> No Services</td>
       </tr>
       {{end}}
       </tbody>

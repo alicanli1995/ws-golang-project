@@ -233,7 +233,11 @@ func (repo *DBRepo) ToggleHostService(w http.ResponseWriter, r *http.Request) {
 
 	var response ServiceJSON
 	response.OK = true
-	err = repo.DB.UpdateHostServiceStatus(hostID, serviceID, active)
+	err = repo.DB.UpdateHostService(models.HostServices{
+		HostID:    hostID,
+		ServiceID: serviceID,
+		Active:    active,
+	})
 	if err != nil {
 		log.Println(err)
 		response.OK = false

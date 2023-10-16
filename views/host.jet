@@ -2,7 +2,9 @@
 
 {{block css()}}
 <style>
-
+  .pointer {
+    cursor: pointer;
+  }
 </style>
 {{end}}
 
@@ -182,22 +184,170 @@ Host
 
         <div class="tab-pane fade" role="tabpanel" aria-labelledby="healthy-tab"
              id="healthy-content">
-          healthy content
+          <div class="row">
+            <div class="col">
+              <h4 class="pt-3">Healthy Services</h4>
+              <table class="table table-striped">
+                <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Last Check</th>
+                  <th>Message</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{range host.HostServices}}
+                {{if .Status == "healthy"}}
+                <tr>
+                  <td>
+                    <span class="{{.Service.Icon}}"></span>
+                    {{.Service.ServiceName}}
+                    <span class="badge bg-secondary pointer" href="javascript:void(0);"
+                          onclick="checkNow({{.ID}}, 'healthy');">
+                      Check Now
+                    </span>
+                  </td>
+                  <td>
+                    {{if dateAfterYearOne(.LastCheck)}}
+                    {{dateFromLayout(.LastCheck, "2006-01-02 15:04")}}
+                    {{else}}
+                    Pending...
+                    {{end}}
+                  </td>
+                  <td></td>
+                </tr>
+                {{end}}
+                {{end}}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <div class="tab-pane fade" role="tabpanel" aria-labelledby="warning-tab"
              id="warning-content">
-          warning content
+          <div class="row">
+            <div class="col">
+              <h4 class="pt-3">Warning Services</h4>
+              <table class="table table-striped">
+                <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Last Check</th>
+                  <th>Message</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{range host.HostServices}}
+                {{if .Status == "warning"}}
+                <tr>
+                  <td>
+                    <span class="{{.Service.Icon}}"></span>
+                    {{.Service.ServiceName}}
+                    <span class="badge bg-secondary pointer" href="javascript:void(0);"
+                          onclick="checkNow({{.ID}}, 'warning');">
+                      Check Now
+                    </span>
+                  </td>
+                  <td>
+                    {{if dateAfterYearOne(.LastCheck)}}
+                    {{dateFromLayout(.LastCheck, "2006-01-02 15:04")}}
+                    {{else}}
+                    Pending...
+                    {{end}}
+                  </td>
+                  <td></td>
+                </tr>
+                {{end}}
+                {{end}}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <div class="tab-pane fade" role="tabpanel" aria-labelledby="problem-tab"
              id="problem-content">
-          problem content
+          <div class="row">
+            <div class="col">
+              <h4 class="pt-3">Problem Services</h4>
+              <table class="table table-striped">
+                <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Last Check</th>
+                  <th>Message</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{range host.HostServices}}
+                {{if .Status == "problem"}}
+                <tr>
+                  <td>
+                    <span class="{{.Service.Icon}}"></span>
+                    {{.Service.ServiceName}}
+                    <span class="badge bg-secondary pointer" href="javascript:void(0);"
+                          onclick="checkNow({{.ID}}, 'problem');">
+                      Check Now
+                    </span>
+                  </td>
+                  <td>
+                    {{if dateAfterYearOne(.LastCheck)}}
+                    {{dateFromLayout(.LastCheck, "2006-01-02 15:04")}}
+                    {{else}}
+                    Pending...
+                    {{end}}
+                  </td>
+                  <td></td>
+                </tr>
+                {{end}}
+                {{end}}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
         <div class="tab-pane fade" role="tabpanel" aria-labelledby="pending-tab"
              id="pending-content">
-          pending content
+          <div class="row">
+            <div class="col">
+              <h4 class="pt-3">Pending Services</h4>
+              <table class="table table-striped">
+                <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Last Check</th>
+                  <th>Message</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{range host.HostServices}}
+                {{if .Status == "pending"}}
+                <tr>
+                  <td>
+                    <span class="{{.Service.Icon}}"></span>
+                    {{.Service.ServiceName}}
+                    <span class="badge bg-secondary pointer" href="javascript:void(0);"
+                          onclick="checkNow({{.ID}}, 'pending');">
+                      Check Now
+                    </span>
+                  </td>
+                  <td>
+                    {{if dateAfterYearOne(.LastCheck)}}
+                    {{dateFromLayout(.LastCheck, "2006-01-02 15:04")}}
+                    {{else}}
+                    Pending...
+                    {{end}}
+                  </td>
+                  <td></td>
+                </tr>
+                {{end}}
+                {{end}}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
         {{end}}
       </div>
@@ -274,6 +424,33 @@ Host
     if (form.checkValidity() === true) {
       form.submit();
     }
+  }
+
+  function checkNow(id, oldStatus) {
+    fetch(`/admin/perform-check/${id}/${oldStatus}`, {
+      method: "GET",
+    }).then(response => response.json())
+    .then(data => {
+      if (data.ok === true) {
+        if (data.old_status !== data.new_status) {
+          attention.toast({
+            msg: data.message,
+            icon: "info",
+            timer: 60000,
+            showCloseButton: true,
+          })
+        } else {
+          attention.toast({
+            msg: "Service is still " + data.old_status,
+            icon: "info",
+            timer: 5000,
+            showCloseButton: true,
+          })
+        }
+      } else {
+        errorAlert("Error: " + data.error);
+      }
+    })
   }
 </script>
 

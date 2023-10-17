@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"golang-vigilate-project/internal/handlers"
 	"net/http"
 )
@@ -59,6 +59,10 @@ func routes() http.Handler {
 
 		// schedule
 		mux.Get("/schedule", handlers.Repo.ListEntries)
+
+		//preferences
+		mux.Post("/preferences/ajax/set-system-pref", handlers.Repo.SetSystemPref)
+		mux.Post("/preferences/ajax/toggle-monitoring", handlers.Repo.ToggleMonitoring)
 
 		// hosts
 		mux.Get("/host/all", handlers.Repo.AllHosts)

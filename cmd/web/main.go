@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/gob"
 	"github.com/alexedwards/scs/v2"
 	"github.com/pusher/pusher-http-go"
@@ -29,7 +30,7 @@ func init() {
 	_ = os.Setenv("TZ", "America/Halifax")
 }
 
-// main is the application entry point
+// the main is the application entry point
 func main() {
 	// set up application
 	insecurePort, err := setupApp()
@@ -37,9 +38,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// close channels & db when application ends
+	// close channels & db when the application ends
 	defer close(app.MailQueue)
-	defer app.DB.SQL.Close()
+	defer func(SQL *sql.DB) {
+		_ = SQL.Close()
+	}(app.DB.SQL)
 
 	// print info
 	log.Printf("******************************************")

@@ -6,6 +6,7 @@ import "golang-vigilate-project/internal/models"
 type DatabaseRepo interface {
 	// preferences
 	AllPreferences() ([]models.Preference, error)
+	UpdateSystemPref(name, value string) error
 	SetSystemPref(name, value string) error
 	InsertOrUpdateSitePreferences(pm map[string]string) error
 
@@ -30,4 +31,5 @@ type DatabaseRepo interface {
 	GetAllServicesStatusCounts() (int, int, int, int, error)
 	GetServicesByStatus(status string) ([]models.HostServices, error)
 	GetHostServiceByID(id int) (models.HostServices, error)
+	GetServicesToMonitor() ([]models.HostServices, error)
 }

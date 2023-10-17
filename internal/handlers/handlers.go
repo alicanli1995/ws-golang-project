@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/CloudyKit/jet/v6"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"golang-vigilate-project/internal/config"
 	"golang-vigilate-project/internal/driver"
 	"golang-vigilate-project/internal/helpers"
@@ -71,7 +71,7 @@ func (repo *DBRepo) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Events displays the events page
+// Events display the events page
 func (repo *DBRepo) Events(w http.ResponseWriter, r *http.Request) {
 	err := helpers.RenderPage(w, r, "events", nil, nil)
 	if err != nil {
@@ -79,7 +79,7 @@ func (repo *DBRepo) Events(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Settings displays the settings page
+// Settings display the settings page
 func (repo *DBRepo) Settings(w http.ResponseWriter, r *http.Request) {
 	err := helpers.RenderPage(w, r, "settings", nil, nil)
 	if err != nil {
@@ -389,4 +389,60 @@ func show500(w http.ResponseWriter, r *http.Request) {
 
 func printTemplateError(w http.ResponseWriter, err error) {
 	_, _ = fmt.Fprint(w, fmt.Sprintf(`<small><span class='text-danger'>Error executing template: %s</span></small>`, err))
+}
+
+func (repo *DBRepo) SetSystemPref(w http.ResponseWriter, r *http.Request) {
+	var jsonResp jsonResp
+	jsonResp.OK = true
+	jsonResp.Message = "Preference updated"
+
+	prefName := r.Form.Get("pref_name")
+	prefValue := r.Form.Get("pref_value")
+
+	err := repo.DB.UpdateSystemPref(prefName, prefValue)
+	if err != nil {
+		jsonResp.OK = false
+		jsonResp.Message = err.Error()
+	}
+
+	repo.App.PreferenceMap["monitoring_live"] = prefValue
+
+	out, _ := json.MarshalIndent(jsonResp, "", "    ")
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(out)
+}
+
+// ToggleMonitoring toggles monitoring on/off
+func (repo *DBRepo) ToggleMonitoring(w http.ResponseWriter, r *http.Request) {
+	enabled := r.Form.Get("enabled")
+
+	if enabled == "1" {
+		log.Println("Starting monitoring...")
+		repo.StartMonitoring()
+		repo.App.Scheduler.Start()
+	} else {
+		log.Println("Stopping monitoring...")
+		for _, v := range repo.App.MonitorMap {
+			repo.App.Scheduler.Remove(v)
+		}
+
+		for k := range repo.App.MonitorMap {
+			delete(repo.App.MonitorMap, k)
+		}
+
+		// delete all entries from scheduler, be sure to stop the scheduler
+		for _, v := range repo.App.Scheduler.Entries() {
+			repo.App.Scheduler.Remove(v.ID)
+		}
+
+		repo.App.Scheduler.Stop()
+	}
+
+	var jsonResp jsonResp
+	jsonResp.OK = true
+	jsonResp.Message = "Monitoring updated"
+
+	out, _ := json.MarshalIndent(jsonResp, "", "    ")
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(out)
 }

@@ -53,8 +53,71 @@
       }
     } else {
       if (tabMap.has(window.location.hash)) {
-        document.querySelectorAll('[data-toggle="tab"]')[tabMap.get(window.location.hash)].Tab.show()
+        document.querySelectorAll('[data-toggle="tab"]')[tabMap.get(
+            window.location.hash)].Tab.show()
       }
     }
+
+    document.getElementById("monitoring-live").addEventListener("change", function () {
+      let enabled = document.getElementById("monitoring-live").checked;
+      if (!enabled) {
+        attention.confirm({
+          html: "Are you sure you want to disable live monitoring?",
+          callback: function (result) {
+            if (result) {
+              updateSystemPref("monitoring_live", "0")
+              toggleMonitoring(false);
+            } else {
+              document.getElementById("monitoring-live").checked = true;
+            }
+          }
+        })
+      } else {
+        updateSystemPref("monitoring_live", "1")
+        toggleMonitoring(true);
+      }
+    })
   });
+
+  function updateSystemPref(prefName, prefValue) {
+    let formData = new FormData();
+    formData.append("pref_name", prefName);
+    formData.append("pref_value", prefValue);
+    formData.append("csrf_token", "{{.CSRFToken}}");
+
+    let ajax = new XMLHttpRequest();
+    ajax.responseType = "json";
+    ajax.open("POST", "/admin/preferences/ajax/set-system-pref");
+    ajax.send(formData);
+
+    ajax.onreadystatechange = function () {
+      if (ajax.readyState === XMLHttpRequest.DONE) {
+        let response = ajax.response;
+        if (!response.ok) {
+          errorAlert(response.message);
+        }
+      }
+    }
+  }
+
+  function toggleMonitoring(enabled) {
+    let formData = new FormData();
+    formData.append("enabled", enabled);
+    formData.append("csrf_token", "{{.CSRFToken}}");
+
+    let ajax = new XMLHttpRequest();
+    ajax.responseType = "json";
+    ajax.open("POST", "/admin/preferences/ajax/toggle-monitoring");
+    ajax.send(formData);
+
+    ajax.onreadystatechange = function () {
+      if (ajax.readyState === XMLHttpRequest.DONE) {
+        let response = ajax.response;
+        if (!response.ok) {
+          errorAlert(response.message);
+        }
+      }
+    }
+  }
+
 </script>

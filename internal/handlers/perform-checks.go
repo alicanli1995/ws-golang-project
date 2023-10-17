@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"golang-vigilate-project/internal/models"
 	"log"
 	"net/http"
@@ -26,6 +26,11 @@ type jsonResp struct {
 	OldStatus     string    `json:"old_status"`
 	NewStatus     string    `json:"new_status"`
 	LastCheck     time.Time `json:"last_check"`
+}
+
+// ScheduledCheck is used to check a host service on a schedule
+func (repo *DBRepo) ScheduledCheck(hsID int) {
+
 }
 
 func (repo *DBRepo) PerformCheck(w http.ResponseWriter, r *http.Request) {

@@ -421,3 +421,78 @@ func (m *postgresDBRepo) GetHostServiceByID(id int) (models.HostServices, error)
 
 	return hs, nil
 }
+
+// GetServicesToMonitor returns a slice of host services to monitor
+func (m *postgresDBRepo) GetServicesToMonitor() ([]models.HostServices, error) {
+	query := `
+		select hs.id,
+			   hs.host_id,
+			   hs.service_id,
+			   hs.active,
+			   hs.scheduler_number,
+			   hs.scheduler_unit,
+			   hs.last_check,
+			   hs.status,
+			   hs.created_at,
+			   hs.updated_at,
+			   s.id,
+			   s.service_name,
+			   s.active,	
+			   s.icon,
+			   s.created_at,	
+			   s.updated_at,
+			   h.host_name
+		from host_services hs
+		left join hosts h on hs.host_id = h.id
+		left join services s on hs.service_id = s.id 
+		where hs.active = 1 and h.active = 1
+		order by h.host_name, s.service_name`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := m.DB.QueryContext(ctx, query)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
+
+	var hosts []models.HostServices
+
+	for rows.Next() {
+		var hs models.HostServices
+		err = rows.Scan(
+			&hs.ID,
+			&hs.HostID,
+			&hs.ServiceID,
+			&hs.Active,
+			&hs.SchedulerNumber,
+			&hs.SchedulerUnit,
+			&hs.LastCheck,
+			&hs.Status,
+			&hs.CreatedAt,
+			&hs.UpdatedAt,
+			&hs.Service.ID,
+			&hs.Service.ServiceName,
+			&hs.Service.Active,
+			&hs.Service.Icon,
+			&hs.Service.CreatedAt,
+			&hs.Service.UpdatedAt,
+			&hs.HostName,
+		)
+		if err != nil {
+			return nil, err
+		}
+		hosts = append(hosts, hs)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return hosts, nil
+}

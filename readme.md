@@ -1,8 +1,6 @@
 
 # Vigilate
 
-This is the source code for the second project in the Udemy course Working with Websockets in Go (Golang).
-
 A dead simple monitoring service, intended to replace things like Nagios.
 
 ## Build

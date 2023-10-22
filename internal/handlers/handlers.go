@@ -233,11 +233,7 @@ func (repo *DBRepo) ToggleHostService(w http.ResponseWriter, r *http.Request) {
 
 	var response ServiceJSON
 	response.OK = true
-	err = repo.DB.UpdateHostService(models.HostServices{
-		HostID:    hostID,
-		ServiceID: serviceID,
-		Active:    active,
-	})
+	err = repo.DB.UpdateHostServiceStatus(hostID, serviceID, active)
 	if err != nil {
 		log.Println(err)
 		response.OK = false
@@ -418,10 +414,12 @@ func (repo *DBRepo) ToggleMonitoring(w http.ResponseWriter, r *http.Request) {
 
 	if enabled == "1" {
 		log.Println("Starting monitoring...")
+		repo.App.PreferenceMap["monitoring_live"] = "1"
 		repo.StartMonitoring()
 		repo.App.Scheduler.Start()
 	} else {
 		log.Println("Stopping monitoring...")
+		repo.App.PreferenceMap["monitoring_live"] = "0"
 		for _, v := range repo.App.MonitorMap {
 			repo.App.Scheduler.Remove(v)
 		}

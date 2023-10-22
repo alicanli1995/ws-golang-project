@@ -15,8 +15,8 @@ func (m *postgresDBRepo) InsertHost(h models.Host) (int, error) {
 
 	query := `
 		INSERT INTO hosts (
-		    host_name, canonical_name, url, ip, ipv6, location, os, created_at, updated_at) VALUES 
-		    ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`
+		    host_name, canonical_name, url, ip, ipv6, location, os, active, created_at, updated_at) VALUES 
+		    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`
 
 	var newID int
 	err := m.DB.QueryRowContext(ctx, query,
@@ -27,6 +27,7 @@ func (m *postgresDBRepo) InsertHost(h models.Host) (int, error) {
 		h.IPV6,
 		h.Location,
 		h.OS,
+		h.Active,
 		time.Now(),
 		time.Now(),
 	).Scan(&newID)
@@ -282,6 +283,20 @@ func (m *postgresDBRepo) UpdateHostService(hs models.HostServices) error {
 		return err
 	}
 
+	return nil
+}
+
+// UpdateHostServiceStatus updates the active status of a host service
+func (m *postgresDBRepo) UpdateHostServiceStatus(hostID, serviceID, active int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	stmt := `update host_services set active = $1 where host_id = $2 and service_id = $3`
+
+	_, err := m.DB.ExecContext(ctx, stmt, active, hostID, serviceID)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

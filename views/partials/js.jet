@@ -16,6 +16,67 @@
     successAlert(data.message);
   })
 
+  publicChannel.bind("app-stopping", function (data) {
+    warningAlert(data.message);
+  })
+
+  publicChannel.bind("host-service-status-changed", function (data) {
+    attention.toast({
+      msg: data.message,
+      icon: 'info',
+      timer: 30000,
+      showCloseButton: true,
+    })
+
+    // update tables
+
+    // remove existing row
+    let exists = !!document.getElementById("host-service-" + data.host_service_id);
+    if (exists) {
+      console.log("removing row")
+      let row = document.getElementById("host-service-" + data.host_service_id);
+      row.parentNode.removeChild(row);
+    }
+
+    // update the tables, if the row exists, update it, if not, add it
+    let table = !!document.getElementById(data.status + "-table");
+    if (table) {
+      let tableRef = document.getElementById(data.status + "-table");
+      let newRow = tableRef.tBodies[0].insertRow(-1);
+      newRow.setAttribute("id", "host-service-" + data.host_service_id);
+      let newCell = newRow.insertCell(0);
+      newCell.innerHTML = `
+            <span class="${data.icon}"></span>
+            ${data.service_name}
+            <span class="badge bg-secondary pointer" onclick="checkNow(data.host_service_id, '${data.status}')">Check Now</span>
+      `;
+
+      let newCell2 = newRow.insertCell(1);
+      if (data.status !== 'pending') {
+        newCell2.innerHTML = `
+           ${data.last_check}
+        `;
+      } else {
+        newCell2.innerHTML = `
+            Pending...
+        `;
+      }
+
+      let newCell3 = newRow.insertCell(2);
+
+
+    }
+  })
+
+  publicChannel.bind("host-service-count-changed", function (data) {
+    let healthyCountExist = !!document.getElementById("healthy_count");
+    if (healthyCountExist) {
+      document.getElementById("healthy_count").innerHTML = data.healthy_count;
+      document.getElementById("problem_count").innerHTML = data.problem_count;
+      document.getElementById("warning_count").innerHTML = data.warning_count;
+      document.getElementById("pending_count").innerHTML = data.pending_count;
+    }
+  })
 
   let attention = Prompt();
 

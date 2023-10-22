@@ -412,7 +412,7 @@ func (repo *DBRepo) SetSystemPref(w http.ResponseWriter, r *http.Request) {
 func (repo *DBRepo) ToggleMonitoring(w http.ResponseWriter, r *http.Request) {
 	enabled := r.Form.Get("enabled")
 
-	if enabled == "1" {
+	if enabled == "true" {
 		log.Println("Starting monitoring...")
 		repo.App.PreferenceMap["monitoring_live"] = "1"
 		repo.StartMonitoring()
@@ -434,6 +434,16 @@ func (repo *DBRepo) ToggleMonitoring(w http.ResponseWriter, r *http.Request) {
 		}
 
 		repo.App.Scheduler.Stop()
+
+		data := make(map[string]string)
+		data["message"] = "Monitoring stopped"
+
+		err := app.WsClient.Trigger("public-channel",
+			"app-stopping", data)
+		if err != nil {
+			log.Println(err)
+		}
+
 	}
 
 	var jsonResp jsonResp

@@ -25,19 +25,18 @@ Problem Services
 <div class="row">
   <div class="col">
 
-    <table class="table table-condensed table-striped">
+    <table id="problems-table" class="table table-condensed table-striped">
       <thead>
       <tr>
         <th>Host</th>
         <th>Service</th>
-        <th>Status</th>
         <th>Message</th>
       </tr>
       </thead>
       <tbody>
       {{if len(services) >0 }}
       {{range services}}
-      <tr>
+      <tr id="host-service-{{.ID}}">
         <td>
           <a href="/admin/host/{{.HostID}}#problem-content">
             {{.HostName}}
@@ -45,15 +44,12 @@ Problem Services
         </td>
         <td>{{.Service.ServiceName}}</td>
         <td>
-          <span class="badge bg-secondary-dark">{{.Status}}</span>
-        </td>
-        <td>
         </td>
       </tr>
       {{end}}
       {{else}}
       <tr>
-        <td colspan="4"> No Services</td>
+        <td colspan="3"> No Services</td>
       </tr>
       {{end}}
       </tbody>

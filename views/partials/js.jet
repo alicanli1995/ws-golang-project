@@ -18,6 +18,69 @@
 
   publicChannel.bind("app-stopping", function (data) {
     warningAlert(data.message);
+    let scheduledTableExist = !!document.getElementById("schedule-table");
+    if (scheduledTableExist) {
+      let tableRef = document.getElementById("schedule-table");
+      tableRef.tBodies[0].innerHTML = "";
+
+      let newRow = tableRef.tBodies[0].insertRow(-1);
+      let newCell = newRow.insertCell(0);
+      newCell.setAttribute("colspan", "5");
+      newCell.innerHTML = "No scheduled checks";
+    }
+  })
+
+  publicChannel.bind("schedule-changed-event", function (data) {
+    let scheduledTableExist = !!document.getElementById("schedule-table");
+    if (scheduledTableExist) {
+      let tableRef = document.getElementById("schedule-table");
+
+      let tableContent = tableRef.innerHTML;
+
+      if (tableContent.includes("No scheduled checks")) {
+        let rowCount = tableRef.rows.length;
+        for (let i = rowCount - 1; i > 0; i--) {
+          tableRef.deleteRow(i);
+        }
+      }
+
+      // delete existing row
+      let exists = !!document.getElementById("schedule-" + data.host_service_id);
+      if (exists) {
+        let row = document.getElementById("schedule-" + data.host_service_id);
+        row.parentNode.removeChild(row);
+      }
+
+      // add in the new row
+      let newRow = tableRef.tBodies[0].insertRow(-1);
+      newRow.setAttribute("id", "schedule-" + data.host_service_id);
+
+      let newCell = newRow.insertCell(0);
+      let newText = document.createTextNode(data.host);
+      newCell.appendChild(newText);
+
+      let newCell2 = newRow.insertCell(1);
+      let newText2 = document.createTextNode(data.service);
+      newCell2.appendChild(newText2);
+
+      let newCell3 = newRow.insertCell(2);
+      let newText3 = document.createTextNode(data.schedule);
+      newCell3.appendChild(newText3);
+
+      let newCell4 = newRow.insertCell(3);
+      let newText4 = document.createTextNode(data.last_run);
+      newCell4.appendChild(newText4);
+
+      let newCell5 = newRow.insertCell(4);
+      if (data.next_run === undefined) {
+        newText = document.createTextNode("Pending...");
+      } else {
+        newText = document.createTextNode(data.next_run);
+      }
+      newCell5.appendChild(newText);
+
+
+    }
   })
 
   publicChannel.bind("host-service-status-changed", function (data) {
@@ -28,16 +91,12 @@
       showCloseButton: true,
     })
 
-    // update tables
+    deleteHostServiceRow(data.host_service_id);
 
-    // remove existing row
-    let exists = !!document.getElementById("host-service-" + data.host_service_id);
-    if (exists) {
-      console.log("removing row")
-      let row = document.getElementById("host-service-" + data.host_service_id);
-      row.parentNode.removeChild(row);
-    }
+    updateHostServiceTable(data);
+  })
 
+  function updateHostServiceTable(data) {
     // update the tables, if the row exists, update it, if not, add it
     let table = !!document.getElementById(data.status + "-table");
     if (table) {
@@ -64,9 +123,42 @@
 
       let newCell3 = newRow.insertCell(2);
 
-
     }
-  })
+  }
+
+  function deleteHostServiceRow(hostServiceID) {
+    // remove existing table row if it exists
+    let exists = !!document.getElementById("host-service-" + hostServiceID);
+    if (exists) {
+      let row = document.getElementById("host-service-" + hostServiceID);
+      row.parentNode.removeChild(row);
+
+      // if this was the last row, add a "no services" row
+      // we don't know what table might exist, so check them all
+
+      // first, set up an array with the appropriate status names
+      let tables = ["healthy", "pending", "warning", "problem"];
+
+      for (let i = 0; i < tables.length; i++) {
+        // check to see if the table exists
+        let currentTableExists = !!document.getElementById(tables[i] + "-table");
+        if (currentTableExists) {
+          // the table exists, so get a reference to it
+          let currentTable = document.getElementById(tables[i] + "-table");
+
+          // if the number of rows in the table is one, the only row left is the header,
+          // so we need to insert a  "No services" row in the table body
+          if (currentTable.rows.length === 1) {
+            // add in a "No services" row with colspan 3
+            let newRow = currentTable.tBodies[0].insertRow(-1);
+            let newCell = newRow.insertCell(0);
+            newCell.setAttribute("colspan", "3");
+            newCell.innerHTML = "No services";
+          }
+        }
+      }
+    }
+  }
 
   publicChannel.bind("host-service-count-changed", function (data) {
     let healthyCountExist = !!document.getElementById("healthy_count");

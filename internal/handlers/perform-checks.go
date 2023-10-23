@@ -168,6 +168,25 @@ func (repo *DBRepo) testServiceForHost(h models.Host, hs models.HostServices) (s
 		_ = repo.broadcastMessage("public-channel", "host-service-status-changed", data)
 	}
 
+	yearOne := time.Date(0001, 1, 1, 0, 0, 0, 0, time.UTC)
+	data := make(map[string]string)
+	data["host_service_id"] = strconv.Itoa(hs.ID)
+	data["service_id"] = strconv.Itoa(hs.ServiceID)
+	data["host_id"] = strconv.Itoa(hs.HostID)
+	if app.Scheduler.Entry(repo.App.MonitorMap[hs.ID]).Next.After(yearOne) {
+		data["next_run"] = app.Scheduler.Entry(repo.App.MonitorMap[hs.ID]).Next.Format("2006-01-02 15:04:05 PM")
+	} else {
+		data["next_run"] = "Pending..."
+	}
+	data["last_run"] = time.Now().Format("2006-01-02 15:04:05 PM")
+	data["host"] = h.HostName
+	data["service"] = hs.Service.ServiceName
+	data["schedule"] = fmt.Sprintf("@every %d%s", hs.SchedulerNumber, hs.SchedulerUnit)
+	data["status"] = newStatus
+	data["icon"] = hs.Service.Icon
+
+	_ = repo.broadcastMessage("public-channel", "schedule-changed-event", data)
+
 	// TODO - Send email or sms if appropriate
 
 	return newStatus, msg

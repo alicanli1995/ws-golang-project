@@ -5,6 +5,7 @@ import (
 	"github.com/CloudyKit/jet/v6"
 	"golang-vigilate-project/internal/helpers"
 	"golang-vigilate-project/internal/models"
+	"log"
 	"net/http"
 	"sort"
 )
@@ -27,6 +28,7 @@ func (repo *DBRepo) ListEntries(w http.ResponseWriter, r *http.Request) {
 		hs, err := repo.DB.GetHostServiceByID(k)
 		if err != nil {
 			printTemplateError(w, err)
+			log.Printf("error getting host service for id %d: %s\n", k, err)
 			return
 		}
 		item.ScheduleText = fmt.Sprintf("@every %d%s", hs.SchedulerNumber, hs.SchedulerUnit)

@@ -45,6 +45,7 @@ Healthy Services
         <td>{{.Service.ServiceName}}</td>
 
         <td>
+          {{.LastMessage}}
         </td>
       </tr>
       {{end}}

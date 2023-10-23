@@ -13,11 +13,15 @@
   let publicChannel = pusher.subscribe("public-channel");
 
   publicChannel.bind("app-starting", function (data) {
+    let toggle = document.getElementById("monitoring-live");
+    toggle.checked = true;
     successAlert(data.message);
   })
 
   publicChannel.bind("app-stopping", function (data) {
     warningAlert(data.message);
+    let toggle = document.getElementById("monitoring-live");
+    toggle.checked = false;
     let scheduledTableExist = !!document.getElementById("schedule-table");
     if (scheduledTableExist) {
       let tableRef = document.getElementById("schedule-table");
@@ -80,6 +84,25 @@
       newCell5.appendChild(newText);
 
 
+    }
+  })
+
+  publicChannel.bind("schedule-item-removed-event", function (data) {
+    let rowExist = !!document.getElementById("schedule-" + data.host_service_id);
+    if (rowExist) {
+      let tableRef = document.getElementById("schedule-" + data.host_service_id);
+      tableRef.parentNode.removeChild(tableRef);
+
+      // if this was the last row, add a "no services" row
+      // we don't know what table might exist, so check them all
+      let currentTable = document.getElementById("schedule-table");
+      if (currentTable.rows.length === 1) {
+        // add in a "No services" row with colspan 3
+        let newRow = currentTable.tBodies[0].insertRow(-1);
+        let newCell = newRow.insertCell(0);
+        newCell.setAttribute("colspan", "5");
+        newCell.innerHTML = "No scheduled checks";
+      }
     }
   })
 

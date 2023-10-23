@@ -44,6 +44,7 @@ Warning Services
         </td>
         <td>{{.Service.ServiceName}}</td>
         <td>
+          {{.LastMessage}}
         </td>
       </tr>
       {{end}}

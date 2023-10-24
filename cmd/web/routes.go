@@ -33,6 +33,9 @@ func routes() http.Handler {
 		// all admin routes are protected
 		mux.Use(Auth)
 
+		// private message
+		mux.Get("/private-message", handlers.Repo.SendPrivateMessage)
+
 		// overview
 		mux.Get("/overview", handlers.Repo.AdminDashboard)
 

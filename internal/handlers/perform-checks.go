@@ -4,7 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"golang-vigilate-project/internal/channeldata"
+	"golang-vigilate-project/internal/helpers"
 	"golang-vigilate-project/internal/models"
+	"golang-vigilate-project/internal/sms"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
@@ -162,11 +166,51 @@ func (repo *DBRepo) testServiceForHost(h models.Host, hs models.HostServices) (s
 		repo.pushStatusChangeEvent(h, hs, newStatus)
 		// add to the event log
 		repo.addEvents(h, hs, newStatus, msg)
+
+		if repo.App.PreferenceMap["notify_via_email"] == "1" {
+			if hs.Status != "pending" {
+				mm := channeldata.MailData{
+					ToName:    repo.App.PreferenceMap["notify_name"],
+					ToAddress: repo.App.PreferenceMap["notify_email"],
+				}
+				if newStatus == "healthy" {
+					mm.Subject = fmt.Sprintf("HEALTHY : service %s on host %s", hs.Service.ServiceName, h.HostName)
+					mm.Content = template.HTML(fmt.Sprintf("Service %s on host %s is now <strong>HEALTHY</strong>",
+						hs.Service.ServiceName, h.HostName))
+				} else if newStatus == "problem" {
+					mm.Subject = fmt.Sprintf("PROBLEM : service %s on host %s", hs.Service.ServiceName, h.HostName)
+					mm.Content = template.HTML(fmt.Sprintf("Service %s on host %s is now <strong>PROBLEM</strong>",
+						hs.Service.ServiceName, h.HostName))
+				} else if newStatus == "warning" {
+				}
+
+				helpers.SendEmail(mm)
+			}
+		}
+
+		if repo.App.PreferenceMap["notify_via_sms"] == "1" {
+			if hs.Status != "pending" {
+				to := repo.App.PreferenceMap["sms_notify_number"]
+				msg := ""
+
+				if newStatus == "healthy" {
+					msg = fmt.Sprintf("Service %s on host %s is now HEALTHY",
+						hs.Service.ServiceName, h.HostName)
+				} else if newStatus == "problem" {
+					msg = fmt.Sprintf("Service %s on host %s is now PROBLEM",
+						hs.Service.ServiceName, h.HostName)
+				} else if newStatus == "warning" {
+				}
+
+				err := sms.SendTextTwilio(to, msg, repo.App)
+				if err != nil {
+					log.Println(err)
+				}
+			}
+		}
 	}
 
 	repo.pushScheduleChangeEvent(hs, newStatus)
-
-	// TODO - Send email or sms if appropriate
 
 	return newStatus, msg
 }

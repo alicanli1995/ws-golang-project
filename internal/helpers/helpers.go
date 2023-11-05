@@ -1,12 +1,9 @@
 package helpers
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/CloudyKit/jet/v6"
-	"github.com/justinas/nosurf"
 	"golang-vigilate-project/internal/config"
-	"golang-vigilate-project/internal/models"
-	"golang-vigilate-project/internal/templates"
 	"log"
 	"math/rand"
 	"net/http"
@@ -66,61 +63,16 @@ func ServerError(w http.ResponseWriter, r *http.Request, err error) {
 	http.ServeFile(w, r, "./ui/static/500.html")
 }
 
-// views is the jet template set
-var views = jet.NewSet(
-	jet.NewOSFileSystemLoader("./views"),
-	jet.InDevelopmentMode(),
-)
-
-// DefaultData adds default data which is accessible to all templates
-func DefaultData(td templates.TemplateData, r *http.Request, w http.ResponseWriter) templates.TemplateData {
-	td.CSRFToken = nosurf.Token(r)
-	td.IsAuthenticated = IsAuthenticated(r)
-	td.PreferenceMap = app.PreferenceMap
-	// if logged in, store user id in template data
-	if td.IsAuthenticated {
-		u := app.Session.Get(r.Context(), "user").(models.User)
-		td.User = u
-	}
-
-	td.Flash = app.Session.PopString(r.Context(), "flash")
-	td.Warning = app.Session.PopString(r.Context(), "warning")
-	td.Error = app.Session.PopString(r.Context(), "error")
-
-	return td
+func RenderJSON(w http.ResponseWriter, r *http.Request, data interface{}) {
+	out, _ := json.MarshalIndent(data, "", "    ")
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(out)
 }
 
-// RenderPage renders a page using jet templates
-func RenderPage(w http.ResponseWriter, r *http.Request, templateName string, variables, data interface{}) error {
-	var vars jet.VarMap
-
-	if variables == nil {
-		vars = make(jet.VarMap)
-	} else {
-		vars = variables.(jet.VarMap)
-	}
-
-	// add default template data
-	var td templates.TemplateData
-	if data != nil {
-		td = data.(templates.TemplateData)
-	}
-
-	// add default data
-	td = DefaultData(td, r, w)
-
-	// add template functions
-	addTemplateFunctions()
-
-	// load the template and render it
-	t, err := views.GetTemplate(fmt.Sprintf("%s.jet", templateName))
+func ReadJSONBody(r *http.Request, dst interface{}) error {
+	dec := json.NewDecoder(r.Body)
+	err := dec.Decode(dst)
 	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	if err = t.Execute(w, vars, td); err != nil {
-		log.Println(err)
 		return err
 	}
 	return nil

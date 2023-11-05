@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/CloudyKit/jet/v6"
+	"github.com/robfig/cron/v3"
 	"golang-vigilate-project/internal/helpers"
 	"golang-vigilate-project/internal/models"
 	"log"
@@ -10,7 +10,7 @@ import (
 	"sort"
 )
 
-type ByHost []models.Schedule
+type ByHost []models.ScheduleResponse
 
 func (a ByHost) Len() int           { return len(a) }
 func (a ByHost) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
@@ -18,13 +18,12 @@ func (a ByHost) Less(i, j int) bool { return a[i].Host < a[j].Host }
 
 // ListEntries lists schedule entries
 func (repo *DBRepo) ListEntries(w http.ResponseWriter, r *http.Request) {
-	var items []models.Schedule
+	var response models.ListEntriesResponse
+	var list []models.ScheduleResponse
 
 	for k, v := range repo.App.MonitorMap {
-		var item models.Schedule
+		var item models.ScheduleResponse
 		item.ID = k
-		item.EntryID = v
-		item.Entry = app.Scheduler.Entry(v)
 		hs, err := repo.DB.GetHostServiceByID(k)
 		if err != nil {
 			printTemplateError(w, err)
@@ -37,17 +36,23 @@ func (repo *DBRepo) ListEntries(w http.ResponseWriter, r *http.Request) {
 		item.Host = hs.HostName
 		item.Service = hs.Service.ServiceName
 
-		items = append(items, item)
+		item.EntryID = v
+		entry := &cron.Entry{
+			ID:       v,
+			Schedule: app.Scheduler.Entry(v).Schedule,
+			Next:     app.Scheduler.Entry(v).Next,
+			Prev:     app.Scheduler.Entry(v).Prev,
+		}
+		item.Entry = *entry
+
+		list = append(list, item)
 	}
 
-	// sort by host name
-	sort.Sort(ByHost(items))
+	sort.Sort(ByHost(list))
 
-	data := make(jet.VarMap)
-	data.Set("items", items)
+	response.Entries = list
+	response.OK = true
+	response.Message = "Schedule entries"
 
-	err := helpers.RenderPage(w, r, "schedule", data, nil)
-	if err != nil {
-		printTemplateError(w, err)
-	}
+	helpers.RenderJSON(w, r, response)
 }

@@ -12,6 +12,7 @@ import (
 	"golang-vigilate-project/internal/driver"
 	"golang-vigilate-project/internal/handlers"
 	"golang-vigilate-project/internal/helpers"
+	"golang-vigilate-project/token"
 	"log"
 	"net/http"
 	"os"
@@ -26,16 +27,17 @@ func setupApp() (*string, error) {
 	inProduction := flag.Bool("production", false, "application is in production")
 	dbHost := flag.String("dbhost", "localhost", "database host")
 	dbPort := flag.String("dbport", "5432", "database port")
-	dbUser := flag.String("dbuser", "", "database user")
-	dbPass := flag.String("dbpass", "", "database password")
-	databaseName := flag.String("db", "vigilate", "database name")
+	dbUser := flag.String("dbuser", "postgres", "database user")
+	dbPass := flag.String("dbpass", "postgres", "database password")
+	databaseName := flag.String("db", "postgres", "database name")
 	dbSsl := flag.String("dbssl", "disable", "database ssl setting")
-	pusherHost := flag.String("pusherHost", "", "pusher host")
-	pusherPort := flag.String("pusherPort", "443", "pusher port")
-	pusherApp := flag.String("pusherApp", "9", "pusher app id")
-	pusherKey := flag.String("pusherKey", "", "pusher key")
-	pusherSecret := flag.String("pusherSecret", "", "pusher secret")
+	pusherHost := flag.String("pusherHost", "localhost", "pusher host")
+	pusherPort := flag.String("pusherPort", "4001", "pusher port")
+	pusherApp := flag.String("pusherApp", "1", "pusher app id")
+	pusherKey := flag.String("pusherKey", "abc123", "pusher key")
+	pusherSecret := flag.String("pusherSecret", "123abc", "pusher secret")
 	pusherSecure := flag.Bool("pusherSecure", false, "pusher server uses SSL (true or false)")
+	jwtSecret := flag.String("jwtSecret", "jwtSecretManagerTry1234512345123", "secret key for signing JWTs")
 
 	flag.Parse()
 
@@ -103,8 +105,13 @@ func setupApp() (*string, error) {
 
 	app = a
 
-	repo = handlers.NewPostgresqlHandlers(db, &app)
-	handlers.NewHandlers(repo, &app)
+	tokenMaker, err := token.NewJWTMaker(*jwtSecret)
+	if err != nil {
+		log.Fatal("cannot create token maker")
+	}
+
+	repo = handlers.NewPostgresqlHandlers(db, &app, tokenMaker)
+	handlers.NewHandlers(repo, &app, tokenMaker)
 
 	log.Println("Getting preferences...")
 	preferenceMap = make(map[string]string)
@@ -154,7 +161,7 @@ func setupApp() (*string, error) {
 
 	go handlers.Repo.StartMonitoring()
 
-	if app.PreferenceMap["monitoring-live"] == "1" {
+	if app.PreferenceMap["monitoring_live"] == "1" {
 		app.Scheduler.Start()
 	}
 

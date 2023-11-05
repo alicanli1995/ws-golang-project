@@ -53,7 +53,7 @@ func (repo *DBRepo) StartMonitoring() {
 
 			yearOne := time.Date(0001, 11, 17, 20, 34, 58, 0, time.UTC)
 			if app.Scheduler.Entry(app.MonitorMap[service.ID]).Next.After(yearOne) {
-				payload["next_run"] = app.Scheduler.Entry(app.MonitorMap[service.ID]).Next.Format("2006-01-02 15:04:05 PM")
+				payload["next_run"] = app.Scheduler.Entry(app.MonitorMap[service.ID]).Next.Format("2006-01-02 15:04:05")
 			} else {
 				payload["next_run"] = "Pending..."
 			}
@@ -61,7 +61,7 @@ func (repo *DBRepo) StartMonitoring() {
 			payload["host"] = service.HostName
 			payload["service"] = service.Service.ServiceName
 			if service.LastCheck.After(yearOne) {
-				payload["last_run"] = service.LastCheck.Format("2006-01-02 15:04:05 PM")
+				payload["last_run"] = service.LastCheck.Format("2006-01-02 15:04:05")
 			} else {
 				payload["last_run"] = "Pending..."
 			}

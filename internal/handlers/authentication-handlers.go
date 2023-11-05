@@ -1,8 +1,7 @@
 package handlers
 
 import (
-	"crypto/sha256"
-	"encoding/base64"
+	"errors"
 	"fmt"
 	"golang-vigilate-project/internal/helpers"
 	"golang-vigilate-project/internal/models"
@@ -12,102 +11,120 @@ import (
 	"time"
 )
 
-// LoginScreen shows the home (login) screen
-func (repo *DBRepo) LoginScreen(w http.ResponseWriter, r *http.Request) {
-	// if already logged in, take to dashboard
-	if repo.App.Session.Exists(r.Context(), "userID") {
-		http.Redirect(w, r, "/admin/overview", http.StatusSeeOther)
-		return
-	}
+type loginUserRequest struct {
+	Email    string `json:"email" binding:"required,alphanum"`
+	Password string `json:"password" binding:"required,min=6"`
+}
 
-	err := helpers.RenderPage(w, r, "login", nil, nil)
-	if err != nil {
-		printTemplateError(w, err)
-	}
+type loginUserResponse struct {
+	OK                   bool               `json:"ok"`
+	AccessToken          string             `json:"access_token"`
+	AccessTokenExpiresAt time.Time          `json:"access_token_expires_at"`
+	RefreshToken         string             `json:"refresh_token"`
+	RefreshTokenExpires  time.Time          `json:"refresh_token_expires"`
+	User                 createUserResponse `json:"user"`
+	SessionID            string             `json:"session_id"`
+}
+
+type createUserResponse struct {
+	Username         string    `json:"username"`
+	FullName         string    `json:"full_name"`
+	Email            string    `json:"email"`
+	PasswordChangeAt time.Time `json:"password_change_at"`
+	CreatedAt        time.Time `json:"created_at"`
 }
 
 // Login attempts to log the user in
 func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
-	_ = repo.App.Session.RenewToken(r.Context())
-	err := r.ParseForm()
+	var req loginUserRequest
+	var resp loginUserResponse
+	var errResp jsonResp
+
+	err := helpers.ReadJSONBody(r, &req)
 	if err != nil {
-		log.Println(err)
-		ClientError(w, r, http.StatusBadRequest)
-		return
+		errResp.Message = "Invalid JSON"
+		errResp.OK = false
+		helpers.RenderJSON(w, r, errResp)
 	}
 
-	id, hash, err := repo.DB.Authenticate(r.Form.Get("email"), r.Form.Get("password"))
-	if err == models.ErrInvalidCredentials {
-		app.Session.Put(r.Context(), "error", "Invalid login")
-		err := helpers.RenderPage(w, r, "login", nil, nil)
-		if err != nil {
-			printTemplateError(w, err)
-		}
+	id, _, err := repo.DB.Authenticate(req.Email, req.Password)
+	if errors.Is(err, models.ErrInvalidCredentials) {
+		errResp.Message = "Invalid username or password"
+		errResp.OK = false
+		helpers.RenderJSON(w, r, errResp)
 		return
-	} else if err == models.ErrInactiveAccount {
-		app.Session.Put(r.Context(), "error", "Inactive account!")
-		err := helpers.RenderPage(w, r, "login", nil, nil)
-		if err != nil {
-			printTemplateError(w, err)
-		}
+	} else if errors.Is(err, models.ErrInactiveAccount) {
+		errResp.Message = "Inactive account"
+		errResp.OK = false
+		helpers.RenderJSON(w, r, errResp)
 		return
 	} else if err != nil {
-		log.Println(err)
-		ClientError(w, r, http.StatusBadRequest)
+		errResp.Message = "Something went wrong. Please try again later"
+		errResp.OK = false
+		helpers.RenderJSON(w, r, errResp)
 		return
 	}
 
-	if r.Form.Get("remember") == "remember" {
-		randomString := helpers.RandomString(12)
-		hasher := sha256.New()
-
-		_, err = hasher.Write([]byte(randomString))
-		if err != nil {
-			log.Println(err)
-		}
-
-		sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
-
-		err = repo.DB.InsertRememberMeToken(id, sha)
-		if err != nil {
-			log.Println(err)
-		}
-
-		// write a cookie
-		expire := time.Now().Add(365 * 24 * 60 * 60 * time.Second)
-		cookie := http.Cookie{
-			Name:     fmt.Sprintf("_%s_gowatcher_remember", app.PreferenceMap["identifier"]),
-			Value:    fmt.Sprintf("%d|%s", id, sha),
-			Path:     "/",
-			Expires:  expire,
-			HttpOnly: true,
-			Domain:   app.Domain,
-			MaxAge:   315360000, // seconds in year
-			Secure:   app.InProduction,
-			SameSite: http.SameSiteStrictMode,
-		}
-		http.SetCookie(w, &cookie)
-	}
-
-	// we authenticated. Get the user.
-	u, err := repo.DB.GetUserById(id)
+	user, err := repo.DB.GetUserById(id)
 	if err != nil {
-		log.Println(err)
-		ClientError(w, r, http.StatusBadRequest)
+		errResp.Message = "Something went wrong. Please try again later"
+		errResp.OK = false
+		helpers.RenderJSON(w, r, errResp)
+		return
+	}
+	duration := 45 * time.Minute
+	accessToken, accTokenPayload, err := repo.TokenMaker.CreateToken(user.Email, "ADMIN", duration)
+	if err != nil {
+		errResp.Message = "Something went wrong. Please try again later"
+		errResp.OK = false
+		helpers.RenderJSON(w, r, errResp)
 		return
 	}
 
-	app.Session.Put(r.Context(), "userID", id)
-	app.Session.Put(r.Context(), "hashedPassword", hash)
-	app.Session.Put(r.Context(), "flash", "You've been logged in successfully!")
-	app.Session.Put(r.Context(), "user", u)
-
-	if r.Form.Get("target") != "" {
-		http.Redirect(w, r, r.Form.Get("target"), http.StatusSeeOther)
+	refreshToken, refTokenPayload, err := repo.TokenMaker.CreateToken(user.Email, "ADMIN", duration*24)
+	if err != nil {
+		errResp.Message = "Something went wrong. Please try again later"
+		errResp.OK = false
+		helpers.RenderJSON(w, r, errResp)
 		return
 	}
 
-	http.Redirect(w, r, "/admin/overview", http.StatusSeeOther)
+	createSessions := models.CreateSessionsParams{
+		Email:        user.Email,
+		ID:           accTokenPayload.ID,
+		RefreshToken: refreshToken,
+		UserAgent:    r.UserAgent(),
+		ClientIp:     r.RemoteAddr,
+		IsBlocked:    false,
+		ExpiresAt:    refTokenPayload.ExpiredAt,
+	}
+
+	sessions, err := repo.DB.CreateSession(createSessions)
+	if err != nil {
+		errResp.Message = "Something went wrong. Please try again later"
+		errResp.OK = false
+		helpers.RenderJSON(w, r, errResp)
+		return
+	}
+
+	resp.AccessToken = accessToken
+	resp.AccessTokenExpiresAt = accTokenPayload.ExpiredAt
+	resp.RefreshToken = refreshToken
+	resp.RefreshTokenExpires = refTokenPayload.ExpiredAt
+	resp.User = newUserResponse(user)
+	resp.SessionID = sessions.ID.String()
+	resp.OK = true
+
+	helpers.RenderJSON(w, r, resp)
+
+}
+
+func newUserResponse(user models.User) createUserResponse {
+	return createUserResponse{
+		FullName:  user.FirstName + " " + user.LastName,
+		Email:     user.Email,
+		CreatedAt: user.CreatedAt,
+	}
 }
 
 // Logout logs the user out

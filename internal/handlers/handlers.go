@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/CloudyKit/jet/v6"
 	"github.com/go-chi/chi/v5"
 	"golang-vigilate-project/internal/config"
 	"golang-vigilate-project/internal/driver"
@@ -11,6 +10,7 @@ import (
 	"golang-vigilate-project/internal/models"
 	"golang-vigilate-project/internal/repository"
 	"golang-vigilate-project/internal/repository/dbrepo"
+	"golang-vigilate-project/token"
 	"log"
 	"net/http"
 	"runtime/debug"
@@ -23,21 +23,24 @@ var app *config.AppConfig
 
 // DBRepo is the db repo
 type DBRepo struct {
-	App *config.AppConfig
-	DB  repository.DatabaseRepo
+	App        *config.AppConfig
+	DB         repository.DatabaseRepo
+	TokenMaker token.Maker
 }
 
 // NewHandlers creates the handlers
-func NewHandlers(repo *DBRepo, a *config.AppConfig) {
+func NewHandlers(repo *DBRepo, a *config.AppConfig, tokenMaker token.Maker) {
 	Repo = repo
 	app = a
+	Repo.TokenMaker = tokenMaker
 }
 
 // NewPostgresqlHandlers creates db repo for postgres
-func NewPostgresqlHandlers(db *driver.DB, a *config.AppConfig) *DBRepo {
+func NewPostgresqlHandlers(db *driver.DB, a *config.AppConfig, tokenMaker token.Maker) *DBRepo {
 	return &DBRepo{
-		App: a,
-		DB:  dbrepo.NewPostgresRepo(db.SQL, a),
+		App:        a,
+		DB:         dbrepo.NewPostgresRepo(db.SQL, a),
+		TokenMaker: tokenMaker,
 	}
 }
 
@@ -49,11 +52,15 @@ func (repo *DBRepo) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 		ClientError(w, r, http.StatusBadRequest)
 		return
 	}
-	vars := make(jet.VarMap)
-	vars.Set("no_healthy", healthy)
-	vars.Set("no_problem", problem)
-	vars.Set("no_pending", pending)
-	vars.Set("no_warning", warning)
+
+	var response models.DashResponse
+
+	response.OK = true
+	response.Message = "Dashboard data retrieved"
+	response.Healthy = healthy
+	response.Warning = warning
+	response.Problem = problem
+	response.Pending = pending
 
 	// get all hosts
 	hosts, err := repo.DB.AllHosts()
@@ -63,12 +70,9 @@ func (repo *DBRepo) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars.Set("hosts", hosts)
-
-	err = helpers.RenderPage(w, r, "dashboard", vars, nil)
-	if err != nil {
-		printTemplateError(w, err)
-	}
+	response.Hosts = hosts
+	// return services object to the JSON response
+	helpers.RenderJSON(w, r, response)
 }
 
 // Events display the events page
@@ -80,21 +84,8 @@ func (repo *DBRepo) Events(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := make(jet.VarMap)
-	vars.Set("events", events)
-
-	err = helpers.RenderPage(w, r, "events", vars, nil)
-	if err != nil {
-		printTemplateError(w, err)
-	}
-}
-
-// Settings display the settings page
-func (repo *DBRepo) Settings(w http.ResponseWriter, r *http.Request) {
-	err := helpers.RenderPage(w, r, "settings", nil, nil)
-	if err != nil {
-		printTemplateError(w, err)
-	}
+	// return services object to the JSON response
+	helpers.RenderJSON(w, r, events)
 }
 
 // PostSettings saves site settings
@@ -152,17 +143,23 @@ func (repo *DBRepo) AllHosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := make(jet.VarMap)
-	vars.Set("hosts", hosts)
-	err = helpers.RenderPage(w, r, "hosts", vars, nil)
-	if err != nil {
-		printTemplateError(w, err)
-	}
+	var response models.HostsJsonResponse
+	response.OK = true
+	response.Message = "Hosts retrieved"
+	response.Hosts = hosts
+
+	helpers.RenderJSON(w, r, response)
 }
 
 // Host shows the host add/edit form
 func (repo *DBRepo) Host(w http.ResponseWriter, r *http.Request) {
+	// get the host id from the url
 	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
+
+	var response models.HostJsonResponse
+	response.OK = true
+	response.Message = "Host retrieved"
+
 	var h models.Host
 	if id > 0 {
 		host, err := repo.DB.FindHostByID(id)
@@ -174,13 +171,11 @@ func (repo *DBRepo) Host(w http.ResponseWriter, r *http.Request) {
 		h = host
 	}
 
-	vars := make(jet.VarMap)
-	vars.Set("host", h)
+	response.Host = h
 
-	err := helpers.RenderPage(w, r, "host", vars, nil)
-	if err != nil {
-		printTemplateError(w, err)
-	}
+	// return services object to the JSON response
+	helpers.RenderJSON(w, r, response)
+
 }
 
 // PostHost adds a host
@@ -189,15 +184,20 @@ func (repo *DBRepo) PostHost(w http.ResponseWriter, r *http.Request) {
 	var host models.Host
 	var hostID int
 
-	host.HostName = r.Form.Get("host_name")
-	host.CanonicalName = r.Form.Get("canonical_name")
-	host.URL = r.Form.Get("url")
-	host.IP = r.Form.Get("ip")
-	host.IPV6 = r.Form.Get("ipv6")
-	host.Location = r.Form.Get("location")
-	host.OS = r.Form.Get("os")
-	active, _ := strconv.Atoi(r.Form.Get("active"))
-	host.Active = active
+	var req models.HostPostRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		log.Println(err)
+	}
+
+	host.HostName = req.HostName
+	host.CanonicalName = req.CanonicalName
+	host.URL = req.URL
+	host.IP = req.IP
+	host.IPV6 = req.IPV6
+	host.Location = req.Location
+	host.OS = req.OS
+	host.Active = req.Active
 
 	if id > 0 {
 		log.Println("updating host")
@@ -225,34 +225,26 @@ func (repo *DBRepo) PostHost(w http.ResponseWriter, r *http.Request) {
 
 }
 
-type ServiceJSON struct {
-	OK bool `json:"ok"`
-}
-
+// ToggleHostService toggles host service on/off
 func (repo *DBRepo) ToggleHostService(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
+	var req models.ToggleServiceRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		log.Println(err)
-		ClientError(w, r, http.StatusBadRequest)
-		return
 	}
 
-	hostID, _ := strconv.Atoi(r.Form.Get("host_id"))
-	serviceID, _ := strconv.Atoi(r.Form.Get("service_id"))
-	active, _ := strconv.Atoi(r.Form.Get("active"))
-
-	var response ServiceJSON
+	var response models.ServiceJSON
 	response.OK = true
-	err = repo.DB.UpdateHostServiceStatus(hostID, serviceID, active)
+	err = repo.DB.UpdateHostServiceStatus(req.HostID, req.ServiceID, req.Active)
 	if err != nil {
 		log.Println(err)
 		response.OK = false
 	}
 
-	hs, _ := repo.DB.GetHostServiceByHostIDServiceID(hostID, serviceID)
-	h, _ := repo.DB.FindHostByID(hostID)
+	hs, _ := repo.DB.GetHostServiceByHostIDServiceID(req.HostID, req.ServiceID)
+	h, _ := repo.DB.FindHostByID(req.HostID)
 
-	if active == 1 {
+	if req.Active == 1 {
 		repo.pushScheduleChangeEvent(hs, "pending")
 		repo.pushStatusChangeEvent(h, hs, "pending")
 		repo.addToMonitorMap(hs)
@@ -260,27 +252,19 @@ func (repo *DBRepo) ToggleHostService(w http.ResponseWriter, r *http.Request) {
 		repo.removeFromMonitorMap(hs)
 	}
 
-	out, _ := json.MarshalIndent(response, "", "    ")
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(out)
+	// return services object to the JSON response
+	helpers.RenderJSON(w, r, response)
 }
 
 // AllUsers lists all admin users
 func (repo *DBRepo) AllUsers(w http.ResponseWriter, r *http.Request) {
-	vars := make(jet.VarMap)
-
 	u, err := repo.DB.AllUsers()
 	if err != nil {
 		ClientError(w, r, http.StatusBadRequest)
 		return
 	}
 
-	vars.Set("users", u)
-
-	err = helpers.RenderPage(w, r, "users", vars, nil)
-	if err != nil {
-		printTemplateError(w, err)
-	}
+	helpers.RenderJSON(w, r, u)
 }
 
 // OneUser displays the add/edit user page
@@ -290,7 +274,7 @@ func (repo *DBRepo) OneUser(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
-	vars := make(jet.VarMap)
+	var user models.User
 
 	if id > 0 {
 
@@ -299,17 +283,14 @@ func (repo *DBRepo) OneUser(w http.ResponseWriter, r *http.Request) {
 			ClientError(w, r, http.StatusBadRequest)
 			return
 		}
+		user = u
 
-		vars.Set("user", u)
 	} else {
 		var u models.User
-		vars.Set("user", u)
+		user = u
 	}
 
-	err = helpers.RenderPage(w, r, "user", vars, nil)
-	if err != nil {
-		printTemplateError(w, err)
-	}
+	helpers.RenderJSON(w, r, user)
 }
 
 // PostOneUser adds/edits a user
@@ -319,24 +300,31 @@ func (repo *DBRepo) PostOneUser(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
+	var req models.UserRequest
 	var u models.User
+
+	// read JSON from request body
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		log.Println(err)
+	}
 
 	if id > 0 {
 		u, _ = repo.DB.GetUserById(id)
-		u.FirstName = r.Form.Get("first_name")
-		u.LastName = r.Form.Get("last_name")
-		u.Email = r.Form.Get("email")
-		u.UserActive, _ = strconv.Atoi(r.Form.Get("user_active"))
+		u.FirstName = req.FirstName
+		u.LastName = req.LastName
+		u.Email = req.Email
+		u.UserActive = req.UserActive
+
 		err := repo.DB.UpdateUser(u)
 		if err != nil {
 			log.Println(err)
 			ClientError(w, r, http.StatusBadRequest)
 			return
 		}
-
-		if len(r.Form.Get("password")) > 0 {
+		if len(req.Password) > 0 {
 			// changing password
-			err := repo.DB.UpdatePassword(id, r.Form.Get("password"))
+			err := repo.DB.UpdatePassword(id, fmt.Sprintf("%s", req.Password))
 			if err != nil {
 				log.Println(err)
 				ClientError(w, r, http.StatusBadRequest)
@@ -344,12 +332,12 @@ func (repo *DBRepo) PostOneUser(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else {
-		u.FirstName = r.Form.Get("first_name")
-		u.LastName = r.Form.Get("last_name")
-		u.Email = r.Form.Get("email")
-		u.UserActive, _ = strconv.Atoi(r.Form.Get("user_active"))
-		u.Password = []byte(r.Form.Get("password"))
 		u.AccessLevel = 3
+		u.FirstName = req.FirstName
+		u.LastName = req.LastName
+		u.Email = req.Email
+		u.UserActive = req.UserActive
+		u.Password = []byte(req.Password)
 
 		_, err := repo.DB.InsertUser(u)
 		if err != nil {
@@ -359,16 +347,26 @@ func (repo *DBRepo) PostOneUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	repo.App.Session.Put(r.Context(), "flash", "Changes saved")
-	http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+	var jsonResp jsonResp
+	jsonResp.OK = true
+	if id > 0 {
+		jsonResp.Message = "User updated"
+	} else {
+		jsonResp.Message = "User added"
+	}
+
+	helpers.RenderJSON(w, r, jsonResp)
 }
 
 // DeleteUser soft deletes a user
 func (repo *DBRepo) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
 	_ = repo.DB.DeleteUser(id)
-	repo.App.Session.Put(r.Context(), "flash", "User deleted")
-	http.Redirect(w, r, "/admin/users", http.StatusSeeOther)
+	var jsonResp jsonResp
+	jsonResp.OK = true
+	jsonResp.Message = "User deleted"
+
+	helpers.RenderJSON(w, r, jsonResp)
 }
 
 // ClientError will display error page for client error i.e. bad request
@@ -408,21 +406,44 @@ func printTemplateError(w http.ResponseWriter, err error) {
 	_, _ = fmt.Fprint(w, fmt.Sprintf(`<small><span class='text-danger'>Error executing template: %s</span></small>`, err))
 }
 
+func (repo *DBRepo) Preferences(w http.ResponseWriter, r *http.Request) {
+	var refs models.PreferencesResponse
+	refs.OK = true
+	refs.Message = "Preferences retrieved"
+
+	allRefs, err := repo.DB.AllPreferences()
+	if err != nil {
+		log.Println(err)
+		refs.OK = false
+		refs.Message = err.Error()
+	}
+
+	refs.Preferences = allRefs
+
+	out, _ := json.MarshalIndent(refs, "", "    ")
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(out)
+
+}
+
 func (repo *DBRepo) SetSystemPref(w http.ResponseWriter, r *http.Request) {
 	var jsonResp jsonResp
 	jsonResp.OK = true
 	jsonResp.Message = "Preference updated"
 
-	prefName := r.Form.Get("pref_name")
-	prefValue := r.Form.Get("pref_value")
+	var req models.SystemPrefRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		log.Println(err)
+	}
 
-	err := repo.DB.UpdateSystemPref(prefName, prefValue)
+	err = repo.DB.UpdateSystemPref(req.PrefName, req.PrefValue)
 	if err != nil {
 		jsonResp.OK = false
 		jsonResp.Message = err.Error()
 	}
 
-	repo.App.PreferenceMap["monitoring_live"] = prefValue
+	repo.App.PreferenceMap["monitoring_live"] = req.PrefValue
 
 	out, _ := json.MarshalIndent(jsonResp, "", "    ")
 	w.Header().Set("Content-Type", "application/json")
@@ -431,9 +452,13 @@ func (repo *DBRepo) SetSystemPref(w http.ResponseWriter, r *http.Request) {
 
 // ToggleMonitoring toggles monitoring on/off
 func (repo *DBRepo) ToggleMonitoring(w http.ResponseWriter, r *http.Request) {
-	enabled := r.Form.Get("enabled")
+	var reactJsResponse models.ToggleMonitoringRequest
+	err := json.NewDecoder(r.Body).Decode(&reactJsResponse)
+	if err != nil {
+		log.Println(err)
+	}
 
-	if enabled == "true" {
+	if reactJsResponse.Enabled == true {
 		log.Println("Starting monitoring...")
 		repo.App.PreferenceMap["monitoring_live"] = "1"
 		repo.StartMonitoring()

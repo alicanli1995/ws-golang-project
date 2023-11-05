@@ -189,6 +189,9 @@ func (repo *DBRepo) testServiceForHost(h models.Host, hs models.HostServices) (s
 					mm.Content = template.HTML(fmt.Sprintf("Service %s on host %s is now <strong>PROBLEM</strong>",
 						hs.Service.ServiceName, h.HostName))
 				} else if newStatus == "warning" {
+					mm.Subject = fmt.Sprintf("WARNING : service %s on host %s", hs.Service.ServiceName, h.HostName)
+					mm.Content = template.HTML(fmt.Sprintf("Service %s on host %s is now <strong>WARNING</strong>",
+						hs.Service.ServiceName, h.HostName))
 				}
 
 				helpers.SendEmail(mm)
@@ -207,6 +210,8 @@ func (repo *DBRepo) testServiceForHost(h models.Host, hs models.HostServices) (s
 					msg = fmt.Sprintf("Service %s on host %s is now PROBLEM",
 						hs.Service.ServiceName, h.HostName)
 				} else if newStatus == "warning" {
+					msg = fmt.Sprintf("Service %s on host %s is now WARNING",
+						hs.Service.ServiceName, h.HostName)
 				}
 
 				err := sms.SendTextTwilio(to, msg, repo.App)
@@ -246,8 +251,9 @@ func (repo *DBRepo) pushStatusChangeEvent(h models.Host, hs models.HostServices,
 	data["host_name"] = h.HostName
 	data["icon"] = hs.Service.Icon
 	data["status"] = newStatus
+	data["old_status"] = hs.Status
 	data["message"] = fmt.Sprintf("%s is %s", hs.Service.ServiceName, newStatus)
-	data["last_check"] = time.Now().Format("2006-01-02 15:04:05 PM")
+	data["last_check"] = time.Now().Format("2006-01-02 15:04:05")
 
 	_ = repo.broadcastMessage("public-channel", "host-service-status-changed", data)
 }
@@ -260,11 +266,11 @@ func (repo *DBRepo) pushScheduleChangeEvent(hs models.HostServices, newStatus st
 	data["service_id"] = strconv.Itoa(hs.ServiceID)
 	data["host_id"] = strconv.Itoa(hs.HostID)
 	if app.Scheduler.Entry(repo.App.MonitorMap[hs.ID]).Next.After(yearOne) {
-		data["next_run"] = app.Scheduler.Entry(repo.App.MonitorMap[hs.ID]).Next.Format("2006-01-02 15:04:05 PM")
+		data["next_run"] = app.Scheduler.Entry(repo.App.MonitorMap[hs.ID]).Next.Format("2006-01-02 15:04:05")
 	} else {
 		data["next_run"] = "Pending..."
 	}
-	data["last_run"] = time.Now().Format("2006-01-02 15:04:05 PM")
+	data["last_run"] = time.Now().Format("2006-01-02 15:04:05")
 	data["host"] = hs.HostName
 	data["service"] = hs.Service.ServiceName
 	data["schedule"] = fmt.Sprintf("@every %d%s", hs.SchedulerNumber, hs.SchedulerUnit)
@@ -395,8 +401,8 @@ func (repo *DBRepo) addToMonitorMap(hs models.HostServices) {
 		data["host_service_id"] = strconv.Itoa(hs.ID)
 		data["service_id"] = strconv.Itoa(hs.ServiceID)
 		data["host_id"] = strconv.Itoa(hs.HostID)
-		data["next_run"] = repo.App.Scheduler.Entry(scheduleID).Next.Format("2006-01-02 15:04:05 PM")
-		data["last_run"] = time.Now().Format("2006-01-02 15:04:05 PM")
+		data["next_run"] = repo.App.Scheduler.Entry(scheduleID).Next.Format("2006-01-02 15:04:05")
+		data["last_run"] = time.Now().Format("2006-01-02 15:04:05")
 		data["host"] = hs.HostName
 		data["service"] = hs.Service.ServiceName
 		data["schedule"] = fmt.Sprintf("@every %d%s", hs.SchedulerNumber, hs.SchedulerUnit)

@@ -1,8 +1,5 @@
 #!/bin/zsh
 
-# This is the bare minimum to run in development. For full list of flags,
-# run ./vigilate -help
-
 go build -o vigilate cmd/web/*.go && ./vigilate \
 -db='postgres' \
 -dbuser='postgres' \

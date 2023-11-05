@@ -88,33 +88,33 @@ func (repo *DBRepo) Events(w http.ResponseWriter, r *http.Request) {
 	helpers.RenderJSON(w, r, events)
 }
 
+type settingsUpdateRequest struct {
+	UpdatePreferences []settingUpdateObj `json:"UpdatePreferences"`
+}
+
+type settingUpdateObj struct {
+	Name       string `json:"Name"`
+	Preference string `json:"Preference"`
+}
+
 // PostSettings saves site settings
 func (repo *DBRepo) PostSettings(w http.ResponseWriter, r *http.Request) {
 	prefMap := make(map[string]string)
-
-	prefMap["site_url"] = r.Form.Get("site_url")
-	prefMap["notify_name"] = r.Form.Get("notify_name")
-	prefMap["notify_email"] = r.Form.Get("notify_email")
-	prefMap["smtp_server"] = r.Form.Get("smtp_server")
-	prefMap["smtp_port"] = r.Form.Get("smtp_port")
-	prefMap["smtp_user"] = r.Form.Get("smtp_user")
-	prefMap["smtp_password"] = r.Form.Get("smtp_password")
-	prefMap["sms_enabled"] = r.Form.Get("sms_enabled")
-	prefMap["sms_provider"] = r.Form.Get("sms_provider")
-	prefMap["twilio_phone_number"] = r.Form.Get("twilio_phone_number")
-	prefMap["twilio_sid"] = r.Form.Get("twilio_sid")
-	prefMap["twilio_auth_token"] = r.Form.Get("twilio_auth_token")
-	prefMap["smtp_from_email"] = r.Form.Get("smtp_from_email")
-	prefMap["smtp_from_name"] = r.Form.Get("smtp_from_name")
-	prefMap["notify_via_sms"] = r.Form.Get("notify_via_sms")
-	prefMap["notify_via_email"] = r.Form.Get("notify_via_email")
-	prefMap["sms_notify_number"] = r.Form.Get("sms_notify_number")
-
-	if r.Form.Get("sms_enabled") == "0" {
-		prefMap["notify_via_sms"] = "0"
+	var req settingsUpdateRequest
+	err := helpers.ReadJSONBody(r, &req)
+	if err != nil {
+		log.Println(err)
 	}
 
-	err := repo.DB.InsertOrUpdateSitePreferences(prefMap)
+	for _, v := range req.UpdatePreferences {
+		prefMap[v.Name] = v.Preference
+	}
+
+	//if r.Form.Get("sms_enabled") == "0" {
+	//	prefMap["notify_via_sms"] = "0"
+	//}
+
+	err = repo.DB.InsertOrUpdateSitePreferences(prefMap)
 	if err != nil {
 		log.Println(err)
 		ClientError(w, r, http.StatusBadRequest)
@@ -126,13 +126,12 @@ func (repo *DBRepo) PostSettings(w http.ResponseWriter, r *http.Request) {
 		app.PreferenceMap[k] = v
 	}
 
-	app.Session.Put(r.Context(), "flash", "Changes saved")
+	var jsonResp jsonResp
+	jsonResp.OK = true
+	jsonResp.Message = "Settings updated"
 
-	if r.Form.Get("action") == "1" {
-		http.Redirect(w, r, "/admin/overview", http.StatusSeeOther)
-	} else {
-		http.Redirect(w, r, "/admin/settings", http.StatusSeeOther)
-	}
+	helpers.RenderJSON(w, r, jsonResp)
+
 }
 
 // AllHosts displays list of all hosts
@@ -420,9 +419,7 @@ func (repo *DBRepo) Preferences(w http.ResponseWriter, r *http.Request) {
 
 	refs.Preferences = allRefs
 
-	out, _ := json.MarshalIndent(refs, "", "    ")
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(out)
+	helpers.RenderJSON(w, r, refs)
 
 }
 
@@ -445,9 +442,7 @@ func (repo *DBRepo) SetSystemPref(w http.ResponseWriter, r *http.Request) {
 
 	repo.App.PreferenceMap["monitoring_live"] = req.PrefValue
 
-	out, _ := json.MarshalIndent(jsonResp, "", "    ")
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(out)
+	helpers.RenderJSON(w, r, jsonResp)
 }
 
 // ToggleMonitoring toggles monitoring on/off

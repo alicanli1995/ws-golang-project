@@ -58,14 +58,14 @@ func routes() http.Handler {
 
 		//preferences
 		mux.Get("/preferences", handlers.Repo.Preferences)
-		mux.Post("/preferences/ajax/set-system-pref", handlers.Repo.SetSystemPref)
-		mux.Post("/preferences/ajax/toggle-monitoring", handlers.Repo.ToggleMonitoring)
+		mux.Post("/preferences/set-system-pref", handlers.Repo.SetSystemPref)
+		mux.Post("/preferences/toggle-monitoring", handlers.Repo.ToggleMonitoring)
 
 		// hosts
 		mux.Get("/host/all", handlers.Repo.AllHosts)
 		mux.Get("/host/{id}", handlers.Repo.Host)
 		mux.Post("/host/{id}", handlers.Repo.PostHost)
-		mux.Post("/host/ajax/toggle-service", handlers.Repo.ToggleHostService)
+		mux.Post("/host/toggle-service", handlers.Repo.ToggleHostService)
 		mux.Get("/perform-check/{id}/{oldStatus}", handlers.Repo.PerformCheck)
 	})
 

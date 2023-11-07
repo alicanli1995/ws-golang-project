@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/go-chi/chi/v5"
-	"golang-vigilate-project/internal/handlers"
+	"golang-observer-project/internal/handlers"
 	"net/http"
 )
 

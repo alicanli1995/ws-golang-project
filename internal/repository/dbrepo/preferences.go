@@ -2,7 +2,7 @@ package dbrepo
 
 import (
 	"context"
-	"golang-vigilate-project/internal/models"
+	"golang-observer-project/internal/models"
 	"log"
 	"time"
 )

@@ -4,8 +4,8 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/pusher/pusher-http-go"
 	"github.com/robfig/cron/v3"
-	"golang-vigilate-project/internal/channeldata"
-	"golang-vigilate-project/internal/driver"
+	"golang-observer-project/internal/channeldata"
+	"golang-observer-project/internal/driver"
 	"html/template"
 )
 

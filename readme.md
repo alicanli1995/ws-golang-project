@@ -1,5 +1,5 @@
 
-# Vigilate
+# observer
 
 A dead simple monitoring service, intended to replace things like Nagios.
 
@@ -8,24 +8,24 @@ A dead simple monitoring service, intended to replace things like Nagios.
 Build in the normal way on Mac/Linux:
 
 ~~~
-go build -o vigilate cmd/web/*.go
+go build -o observer cmd/web/*.go
 ~~~
 
 Or on Windows:
 
 ~~~
-go build -o vigilate.exe cmd/web/.
+go build -o observer.exe cmd/web/.
 ~~~
 
 Or for a particular platform:
 
 ~~~
-env GOOS=linux GOARCH=amd64 go build -o vigilate cmd/web/*.go
+env GOOS=linux GOARCH=amd64 go build -o observer cmd/web/*.go
 ~~~
 
 ## Requirements
 
-Vigilate requires:
+observer requires:
 - Postgres 11 or later (db is set up as a repository, so other databases are possible)
 - An account with [Pusher](https://pusher.com/), or a Pusher alternative 
 (like [ipê](https://github.com/dimiro1/ipe))
@@ -49,7 +49,7 @@ ipe.exe
 Run with flags:
 
 ~~~
-./vigilate \
+./observer \
 -dbuser='tcs' \
 -pusherHost='localhost' \
 -pusherPort='4001' \
@@ -62,10 +62,10 @@ Run with flags:
 ## All Flags
 
 ~~~~
-tcs@grendel vigilate-udemy % ./vigilate -help
-Usage of ./vigilate:
+tcs@grendel observer-udemy % ./observer -help
+Usage of ./observer:
   -db string
-        database name (default "vigilate")
+        database name (default "observer")
   -dbhost string
         database host (default "localhost")
   -dbport string
@@ -77,7 +77,7 @@ Usage of ./vigilate:
   -domain string
         domain name (e.g. example.com) (default "localhost")
   -identifier string
-        unique identifier (default "vigilate")
+        unique identifier (default "observer")
   -port string
         port to listen on (default ":4000")
   -production

@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-go build -o vigilate cmd/web/*.go && ./vigilate \
+go build -o observer cmd/web/*.go && ./observer \
 -db='postgres' \
 -dbuser='postgres' \
 -dbpass='postgres' \

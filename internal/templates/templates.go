@@ -1,6 +1,6 @@
 package templates
 
-import "golang-vigilate-project/internal/models"
+import "golang-observer-project/internal/models"
 
 // TemplateData defines template data
 type TemplateData struct {

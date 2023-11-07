@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
-	"golang-vigilate-project/internal/certificateutils"
-	"golang-vigilate-project/internal/channeldata"
-	"golang-vigilate-project/internal/helpers"
-	"golang-vigilate-project/internal/models"
-	"golang-vigilate-project/internal/sms"
+	"golang-observer-project/internal/certificateutils"
+	"golang-observer-project/internal/channeldata"
+	"golang-observer-project/internal/helpers"
+	"golang-observer-project/internal/models"
+	"golang-observer-project/internal/sms"
 	"html/template"
 	"log"
 	"net/http"
@@ -159,7 +159,7 @@ func (repo *DBRepo) testServiceForHost(h models.Host, hs models.HostServices) (s
 
 	switch hs.ServiceID {
 	case HTTP:
-		msg, newStatus = repo.testHTTP(h.URL)
+		msg, newStatus = repo.testHTTP(h.URL, h, hs)
 		break
 	case HTTPS:
 		msg, newStatus = repo.testHTTPS(h.URL)
@@ -281,7 +281,7 @@ func (repo *DBRepo) pushScheduleChangeEvent(hs models.HostServices, newStatus st
 
 }
 
-func (repo *DBRepo) testHTTP(url string) (string, string) {
+func (repo *DBRepo) testHTTP(url string, h models.Host, hs models.HostServices) (string, string) {
 	if strings.HasSuffix(url, "/") {
 		url = strings.TrimSuffix(url, "/")
 	}
@@ -292,6 +292,13 @@ func (repo *DBRepo) testHTTP(url string) (string, string) {
 	if err != nil {
 		return err.Error(), "problem"
 	}
+
+	computeTimes := helpers.ComputeTime(url)
+
+	computeTimes.Host = h
+	computeTimes.HostServices = hs
+	computeTimes.CreatedAt = time.Now()
+	computeTimes.UpdatedAt = time.Now()
 
 	defer func(resp *http.Response) {
 		err := resp.Body.Close()

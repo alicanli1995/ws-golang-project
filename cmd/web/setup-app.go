@@ -7,12 +7,12 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/pusher/pusher-http-go"
 	"github.com/robfig/cron/v3"
-	"golang-vigilate-project/internal/channeldata"
-	"golang-vigilate-project/internal/config"
-	"golang-vigilate-project/internal/driver"
-	"golang-vigilate-project/internal/handlers"
-	"golang-vigilate-project/internal/helpers"
-	"golang-vigilate-project/token"
+	"golang-observer-project/internal/channeldata"
+	"golang-observer-project/internal/config"
+	"golang-observer-project/internal/driver"
+	"golang-observer-project/internal/handlers"
+	"golang-observer-project/internal/helpers"
+	"golang-observer-project/token"
 	"log"
 	"net/http"
 	"os"
@@ -22,7 +22,7 @@ import (
 func setupApp() (*string, error) {
 	// read flags
 	insecurePort := flag.String("port", ":4000", "port to listen on")
-	identifier := flag.String("identifier", "vigilate", "unique identifier")
+	identifier := flag.String("identifier", "observer", "unique identifier")
 	domain := flag.String("domain", "localhost", "domain name (e.g. example.com)")
 	inProduction := flag.Bool("production", false, "application is in production")
 	dbHost := flag.String("dbhost", "localhost", "database host")
@@ -99,7 +99,7 @@ func setupApp() (*string, error) {
 		Domain:       *domain,
 		PusherSecret: *pusherSecret,
 		MailQueue:    mailQueue,
-		Version:      vigilateVersion,
+		Version:      observerVersion,
 		Identifier:   *identifier,
 	}
 
@@ -128,7 +128,7 @@ func setupApp() (*string, error) {
 	preferenceMap["pusher-port"] = *pusherPort
 	preferenceMap["pusher-key"] = *pusherKey
 	preferenceMap["identifier"] = *identifier
-	preferenceMap["version"] = vigilateVersion
+	preferenceMap["version"] = observerVersion
 
 	app.PreferenceMap = preferenceMap
 

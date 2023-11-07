@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/aymerick/douceur/inliner"
 	mail "github.com/xhit/go-simple-mail/v2"
-	"golang-vigilate-project/internal/channeldata"
+	"golang-observer-project/internal/channeldata"
 	"html/template"
 	"jaytaylor.com/html2text"
 	"log"

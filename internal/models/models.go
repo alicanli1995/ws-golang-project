@@ -232,3 +232,16 @@ type Session struct {
 	ExpiresAt    time.Time          `json:"expires_at"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
+
+type ComputeTimes struct {
+	ID           string
+	DNSDone      time.Duration
+	ConnectTime  time.Duration
+	TLSHandshake time.Duration
+	FirstByte    time.Duration
+	TotalTime    time.Duration
+	Host         Host
+	HostServices HostServices
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}

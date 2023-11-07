@@ -1,12 +1,15 @@
 package helpers
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"golang-vigilate-project/internal/config"
+	"golang-observer-project/internal/config"
+	"golang-observer-project/internal/models"
 	"log"
 	"math/rand"
 	"net/http"
+	"net/http/httptrace"
 	"runtime/debug"
 	"time"
 )
@@ -76,4 +79,41 @@ func ReadJSONBody(r *http.Request, dst interface{}) error {
 		return err
 	}
 	return nil
+}
+
+func ComputeTime(url string) *models.ComputeTimes {
+	req, _ := http.NewRequest("GET", url, nil)
+
+	var start, connect, dns, tlsHandshake time.Time
+	var computeTimes models.ComputeTimes
+
+	trace := &httptrace.ClientTrace{
+		DNSStart: func(dsi httptrace.DNSStartInfo) { dns = time.Now() },
+		DNSDone: func(ddi httptrace.DNSDoneInfo) {
+			computeTimes.DNSDone = time.Since(dns)
+		},
+
+		TLSHandshakeStart: func() { tlsHandshake = time.Now() },
+		TLSHandshakeDone: func(cs tls.ConnectionState, err error) {
+			computeTimes.TLSHandshake = time.Since(tlsHandshake)
+		},
+
+		ConnectStart: func(network, addr string) { connect = time.Now() },
+		ConnectDone: func(network, addr string, err error) {
+			computeTimes.ConnectTime = time.Since(connect)
+		},
+
+		GotFirstResponseByte: func() {
+			computeTimes.FirstByte = time.Since(start)
+		},
+	}
+
+	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
+	start = time.Now()
+	if _, err := http.DefaultTransport.RoundTrip(req); err != nil {
+		log.Fatal(err)
+	}
+	computeTimes.TotalTime = time.Since(start)
+
+	return &computeTimes
 }

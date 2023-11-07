@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"golang-vigilate-project/internal/helpers"
+	"golang-observer-project/internal/helpers"
 	"net/http"
 )
 

@@ -1,6 +1,6 @@
 package helpers
 
-import "golang-vigilate-project/internal/channeldata"
+import "golang-observer-project/internal/channeldata"
 
 // SendEmail sends an email
 func SendEmail(mailMessage channeldata.MailData) {

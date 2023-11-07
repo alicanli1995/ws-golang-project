@@ -3,8 +3,8 @@ package handlers
 import (
 	"errors"
 	"fmt"
-	"golang-vigilate-project/internal/helpers"
-	"golang-vigilate-project/internal/models"
+	"golang-observer-project/internal/helpers"
+	"golang-observer-project/internal/models"
 	"log"
 	"net/http"
 	"strings"

@@ -5,9 +5,9 @@ import (
 	"encoding/gob"
 	"github.com/alexedwards/scs/v2"
 	"github.com/pusher/pusher-http-go"
-	"golang-vigilate-project/internal/config"
-	"golang-vigilate-project/internal/handlers"
-	"golang-vigilate-project/internal/models"
+	"golang-observer-project/internal/config"
+	"golang-observer-project/internal/handlers"
+	"golang-observer-project/internal/models"
 	"log"
 	"net/http"
 	"os"
@@ -21,7 +21,7 @@ var session *scs.SessionManager
 var preferenceMap map[string]string
 var wsClient pusher.Client
 
-const vigilateVersion = "1.0.0"
+const observerVersion = "1.0.0"
 const maxWorkerPoolSize = 5
 const maxJobMaxWorkers = 5
 
@@ -46,7 +46,7 @@ func main() {
 
 	// print info
 	log.Printf("******************************************")
-	log.Printf("** %sVigilate%s v%s built in %s", "\033[31m", "\033[0m", vigilateVersion, runtime.Version())
+	log.Printf("** %sObserver%s v%s built in %s", "\033[31m", "\033[0m", observerVersion, runtime.Version())
 	log.Printf("**----------------------------------------")
 	log.Printf("** Running with %d Processors", runtime.NumCPU())
 	log.Printf("** Running on %s", runtime.GOOS)

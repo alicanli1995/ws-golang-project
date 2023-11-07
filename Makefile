@@ -17,12 +17,12 @@ start_ipe:
 ## build_back: builds the back end
 build_back:
 	@echo Building back end...
-	@go build -o vigilate.exe ./cmd/web/
+	@go build -o observer.exe ./cmd/web/
 	@echo Back end built!
 
 ## start_back: starts the back end
 start_back: build_back
 	@echo Starting the back end...
-	go build -o vigilate.exe .\cmd\web\ &&vigilate.exe -dbuser=${DB_USER} -pusherHost=${PUSHER_HOST} \
+	go build -o observer.exe .\cmd\web\ &&observer.exe -dbuser=${DB_USER} -pusherHost=${PUSHER_HOST} \
 	-pusherSecret=${PUSHER_SECRET} -pusherKey=${PUSHER_KEY} -pusherSecure=${PUSHER_SECURE} -pusherApp=${PUSHER_APP} -db=${DB} -dbpass=${DB_PASSWORD}
 	@echo Back end running!

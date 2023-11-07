@@ -3,7 +3,7 @@ package sms
 import (
 	"encoding/json"
 	"errors"
-	"golang-vigilate-project/internal/config"
+	"golang-observer-project/internal/config"
 	"log"
 	"net/http"
 	"net/url"

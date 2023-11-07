@@ -1,6 +1,6 @@
 package repository
 
-import "golang-vigilate-project/internal/models"
+import "golang-observer-project/internal/models"
 
 // DatabaseRepo is the database repository
 type DatabaseRepo interface {

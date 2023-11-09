@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"golang-observer-project/internal/certificateutils"
 	"golang-observer-project/internal/channeldata"
 	"golang-observer-project/internal/helpers"
@@ -148,9 +148,7 @@ func (repo *DBRepo) PerformCheck(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// send the response
-	out, _ := json.MarshalIndent(resp, "", "    ")
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(out)
+	helpers.RenderJSON(w, r, resp)
 
 }
 
@@ -295,10 +293,16 @@ func (repo *DBRepo) testHTTP(url string, h models.Host, hs models.HostServices) 
 
 	computeTimes := helpers.ComputeTime(url)
 
+	computeTimes.ID = uuid.New().String()
 	computeTimes.Host = h
-	computeTimes.HostServices = hs
+	computeTimes.HostServices = []models.HostServices{hs}
 	computeTimes.CreatedAt = time.Now()
 	computeTimes.UpdatedAt = time.Now()
+
+	err = repo.ElasticClient.AddDocument("performances", computeTimes.ID, *computeTimes)
+	if err != nil {
+		log.Println(err)
+	}
 
 	defer func(resp *http.Response) {
 		err := resp.Body.Close()
@@ -436,4 +440,32 @@ func (repo *DBRepo) removeFromMonitorMap(hs models.HostServices) {
 			}
 		}
 	}
+}
+
+func (repo *DBRepo) GetDocumentsInLastXMinutes(w http.ResponseWriter, r *http.Request) {
+	indexName := chi.URLParam(r, "indexName")
+	minutes, err := strconv.Atoi(chi.URLParam(r, "minutes"))
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	hostID, err := strconv.Atoi(chi.URLParam(r, "hostID"))
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	serviceID, err := strconv.Atoi(chi.URLParam(r, "serviceID"))
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	computeTimes, err := repo.ElasticClient.GetDocumentsByIDAndInLastXMinutes(indexName, minutes, hostID, serviceID)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	helpers.RenderJSON(w, r, computeTimes)
 }

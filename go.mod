@@ -5,7 +5,10 @@ go 1.21
 require (
 	github.com/alexedwards/scs/postgresstore v0.0.0-20210131110750-3ca38f9a41cc
 	github.com/alexedwards/scs/v2 v2.4.0
+	github.com/aquasecurity/esquery v0.2.0
 	github.com/aymerick/douceur v0.2.0
+	github.com/elastic/go-elasticsearch/v7 v7.6.0
+	github.com/elastic/go-elasticsearch/v8 v8.10.1
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-chi/cors v1.2.1
 	github.com/golang-jwt/jwt/v4 v4.5.0
@@ -23,6 +26,8 @@ require (
 require (
 	github.com/PuerkitoBio/goquery v1.6.1 // indirect
 	github.com/andybalholm/cascadia v1.2.0 // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.3.0 // indirect
+	github.com/fatih/structs v1.1.0 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect

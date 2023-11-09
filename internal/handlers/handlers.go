@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"golang-observer-project/internal/config"
 	"golang-observer-project/internal/driver"
+	"golang-observer-project/internal/elastic"
 	"golang-observer-project/internal/helpers"
 	"golang-observer-project/internal/models"
 	"golang-observer-project/internal/repository"
@@ -23,24 +24,27 @@ var app *config.AppConfig
 
 // DBRepo is the db repo
 type DBRepo struct {
-	App        *config.AppConfig
-	DB         repository.DatabaseRepo
-	TokenMaker token.Maker
+	App           *config.AppConfig
+	DB            repository.DatabaseRepo
+	TokenMaker    token.Maker
+	ElasticClient elastic.Operations
 }
 
 // NewHandlers creates the handlers
-func NewHandlers(repo *DBRepo, a *config.AppConfig, tokenMaker token.Maker) {
+func NewHandlers(repo *DBRepo, a *config.AppConfig, tokenMaker token.Maker, elasticClient elastic.Operations) {
 	Repo = repo
 	app = a
 	Repo.TokenMaker = tokenMaker
+	Repo.ElasticClient = elasticClient
 }
 
 // NewPostgresqlHandlers creates db repo for postgres
-func NewPostgresqlHandlers(db *driver.DB, a *config.AppConfig, tokenMaker token.Maker) *DBRepo {
+func NewPostgresqlHandlers(db *driver.DB, a *config.AppConfig, tokenMaker token.Maker, elasticClient elastic.Operations) *DBRepo {
 	return &DBRepo{
-		App:        a,
-		DB:         dbrepo.NewPostgresRepo(db.SQL, a),
-		TokenMaker: tokenMaker,
+		App:           a,
+		DB:            dbrepo.NewPostgresRepo(db.SQL, a),
+		TokenMaker:    tokenMaker,
+		ElasticClient: elasticClient,
 	}
 }
 

@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/alexedwards/scs/v2"
+	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/pusher/pusher-http-go"
 	"github.com/robfig/cron/v3"
 	"golang-observer-project/internal/channeldata"
@@ -24,4 +25,5 @@ type AppConfig struct {
 	MailQueue     chan channeldata.MailJob
 	Version       string
 	Identifier    string
+	ElasticConfig *elasticsearch.Client
 }

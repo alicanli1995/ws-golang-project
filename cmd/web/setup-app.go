@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"github.com/alexedwards/scs/postgresstore"
 	"github.com/alexedwards/scs/v2"
+	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/pusher/pusher-http-go"
 	"github.com/robfig/cron/v3"
 	"golang-observer-project/internal/channeldata"
 	"golang-observer-project/internal/config"
 	"golang-observer-project/internal/driver"
+	"golang-observer-project/internal/elastic/elastic"
 	"golang-observer-project/internal/handlers"
 	"golang-observer-project/internal/helpers"
 	"golang-observer-project/token"
@@ -110,8 +112,18 @@ func setupApp() (*string, error) {
 		log.Fatal("cannot create token maker")
 	}
 
-	repo = handlers.NewPostgresqlHandlers(db, &app, tokenMaker)
-	handlers.NewHandlers(repo, &app, tokenMaker)
+	cfg := elasticsearch.Config{
+		Addresses: []string{
+			"http://localhost:9200",
+		},
+	}
+
+	client, err := elasticsearch.NewClient(cfg)
+
+	elasticClient := elastic.NewElasticRepo(client, &app)
+
+	repo = handlers.NewPostgresqlHandlers(db, &app, tokenMaker, elasticClient)
+	handlers.NewHandlers(repo, &app, tokenMaker, elasticClient)
 
 	log.Println("Getting preferences...")
 	preferenceMap = make(map[string]string)

@@ -67,6 +67,9 @@ func routes() http.Handler {
 		mux.Post("/host/{id}", handlers.Repo.PostHost)
 		mux.Post("/host/toggle-service", handlers.Repo.ToggleHostService)
 		mux.Get("/perform-check/{id}/{oldStatus}", handlers.Repo.PerformCheck)
+
+		// elastic
+		mux.Get("/get-documents-in-last-x-minutes/{indexName}/{hostID}/{serviceID}/{minutes}", handlers.Repo.GetDocumentsInLastXMinutes)
 	})
 
 	return mux

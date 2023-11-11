@@ -16,7 +16,9 @@ func (j job) Run() {
 }
 
 func (repo *DBRepo) StartMonitoring() {
+	log.Println(app.PreferenceMap["monitoring_live"], "monitoring live")
 	if app.PreferenceMap["monitoring_live"] == "1" {
+		log.Println("Monitoring started..")
 		data := make(map[string]string)
 		data["message"] = "Monitoring started"
 

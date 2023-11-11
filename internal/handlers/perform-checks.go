@@ -148,7 +148,7 @@ func (repo *DBRepo) PerformCheck(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// send the response
-	helpers.RenderJSON(w, r, resp)
+	helpers.RenderJSON(w, resp)
 
 }
 
@@ -160,7 +160,7 @@ func (repo *DBRepo) testServiceForHost(h models.Host, hs models.HostServices) (s
 		msg, newStatus = repo.testHTTP(h.URL, h, hs)
 		break
 	case HTTPS:
-		msg, newStatus = repo.testHTTPS(h.URL)
+		msg, newStatus = repo.testHTTPS(h.URL, h, hs)
 		break
 	case SSLCertificate:
 		msg, newStatus = repo.testSSLCert(h.URL)
@@ -288,21 +288,11 @@ func (repo *DBRepo) testHTTP(url string, h models.Host, hs models.HostServices) 
 
 	resp, err := http.Get(url)
 	if err != nil {
+		_ = repo.addElastic(url, h, hs, err)
 		return err.Error(), "problem"
 	}
 
-	computeTimes := helpers.ComputeTime(url)
-
-	computeTimes.ID = uuid.New().String()
-	computeTimes.Host = h
-	computeTimes.HostServices = []models.HostServices{hs}
-	computeTimes.CreatedAt = time.Now()
-	computeTimes.UpdatedAt = time.Now()
-
-	err = repo.ElasticClient.AddDocument("performances", computeTimes.ID, *computeTimes)
-	if err != nil {
-		log.Println(err)
-	}
+	_ = repo.addElastic(url, h, hs, err)
 
 	defer func(resp *http.Response) {
 		err := resp.Body.Close()
@@ -318,8 +308,24 @@ func (repo *DBRepo) testHTTP(url string, h models.Host, hs models.HostServices) 
 	}
 }
 
+func (repo *DBRepo) addElastic(url string, h models.Host, hs models.HostServices, err error) error {
+	computeTimes := helpers.ComputeTime(url)
+
+	computeTimes.ID = uuid.New().String()
+	computeTimes.Host = h
+	computeTimes.HostServices = hs
+	computeTimes.CreatedAt = time.Now()
+	computeTimes.UpdatedAt = time.Now()
+
+	err = repo.ElasticClient.AddDocument("performances", computeTimes.ID, *computeTimes)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
+}
+
 // testHTTPS tests an url with https
-func (repo *DBRepo) testHTTPS(url string) (string, string) {
+func (repo *DBRepo) testHTTPS(url string, h models.Host, hs models.HostServices) (string, string) {
 	if strings.HasSuffix(url, "/") {
 		url = strings.TrimSuffix(url, "/")
 	}
@@ -328,8 +334,11 @@ func (repo *DBRepo) testHTTPS(url string) (string, string) {
 
 	resp, err := http.Get(url)
 	if err != nil {
+		_ = repo.addElastic(url, h, hs, err)
 		return err.Error(), "problem"
 	}
+
+	_ = repo.addElastic(url, h, hs, err)
 
 	defer func(resp *http.Response) {
 		err := resp.Body.Close()
@@ -467,5 +476,5 @@ func (repo *DBRepo) GetDocumentsInLastXMinutes(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	helpers.RenderJSON(w, r, computeTimes)
+	helpers.RenderJSON(w, computeTimes)
 }

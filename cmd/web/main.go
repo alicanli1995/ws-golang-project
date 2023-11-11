@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"encoding/gob"
-	"github.com/alexedwards/scs/v2"
 	"github.com/pusher/pusher-http-go"
 	"golang-observer-project/internal/config"
 	"golang-observer-project/internal/handlers"
@@ -17,7 +16,6 @@ import (
 
 var app config.AppConfig
 var repo *handlers.DBRepo
-var session *scs.SessionManager
 var preferenceMap map[string]string
 var wsClient pusher.Client
 
@@ -27,7 +25,7 @@ const maxJobMaxWorkers = 5
 
 func init() {
 	gob.Register(models.User{})
-	_ = os.Setenv("TZ", "America/Halifax")
+	_ = os.Setenv("TZ", "UTC")
 }
 
 // the main is the application entry point

@@ -11,7 +11,7 @@ import (
 	"golang-observer-project/internal/models"
 	"golang-observer-project/internal/repository"
 	"golang-observer-project/internal/repository/dbrepo"
-	"golang-observer-project/token"
+	"golang-observer-project/internal/token"
 	"log"
 	"net/http"
 	"runtime/debug"
@@ -76,7 +76,7 @@ func (repo *DBRepo) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 
 	response.Hosts = hosts
 	// return services object to the JSON response
-	helpers.RenderJSON(w, r, response)
+	helpers.RenderJSON(w, response)
 }
 
 // Events display the events page
@@ -89,7 +89,7 @@ func (repo *DBRepo) Events(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// return services object to the JSON response
-	helpers.RenderJSON(w, r, events)
+	helpers.RenderJSON(w, events)
 }
 
 type settingsUpdateRequest struct {
@@ -134,7 +134,7 @@ func (repo *DBRepo) PostSettings(w http.ResponseWriter, r *http.Request) {
 	jsonResp.OK = true
 	jsonResp.Message = "Settings updated"
 
-	helpers.RenderJSON(w, r, jsonResp)
+	helpers.RenderJSON(w, jsonResp)
 
 }
 
@@ -151,7 +151,7 @@ func (repo *DBRepo) AllHosts(w http.ResponseWriter, r *http.Request) {
 	response.Message = "Hosts retrieved"
 	response.Hosts = hosts
 
-	helpers.RenderJSON(w, r, response)
+	helpers.RenderJSON(w, response)
 }
 
 // Host shows the host add/edit form
@@ -177,15 +177,23 @@ func (repo *DBRepo) Host(w http.ResponseWriter, r *http.Request) {
 	response.Host = h
 
 	// return services object to the JSON response
-	helpers.RenderJSON(w, r, response)
+	helpers.RenderJSON(w, response)
 
+}
+
+type postHostResponse struct {
+	OK      bool        `json:"ok"`
+	Message string      `json:"message"`
+	Host    models.Host `json:"host"`
 }
 
 // PostHost adds a host
 func (repo *DBRepo) PostHost(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
 	var host models.Host
-	var hostID int
+	var jsonResp postHostResponse
+	jsonResp.OK = true
+	jsonResp.Message = "Host updated"
 
 	var req models.HostPostRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -203,7 +211,6 @@ func (repo *DBRepo) PostHost(w http.ResponseWriter, r *http.Request) {
 	host.Active = req.Active
 
 	if id > 0 {
-		log.Println("updating host")
 		host.ID = id
 		err := repo.DB.UpdateHost(host)
 		if err != nil {
@@ -211,20 +218,18 @@ func (repo *DBRepo) PostHost(w http.ResponseWriter, r *http.Request) {
 			ClientError(w, r, http.StatusBadRequest)
 			return
 		}
-		hostID = id
 	} else {
-		log.Println("inserting host")
-		ID, err := repo.DB.InsertHost(host)
+		_, err := repo.DB.InsertHost(host)
 		if err != nil {
 			log.Println(err)
 			ClientError(w, r, http.StatusBadRequest)
 			return
 		}
-		hostID = ID
 	}
 
-	repo.App.Session.Put(r.Context(), "flash", "Changes saved")
-	http.Redirect(w, r, "/admin/host/"+strconv.Itoa(hostID), http.StatusSeeOther)
+	jsonResp.Host = host
+
+	helpers.RenderJSON(w, jsonResp)
 
 }
 
@@ -256,7 +261,7 @@ func (repo *DBRepo) ToggleHostService(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// return services object to the JSON response
-	helpers.RenderJSON(w, r, response)
+	helpers.RenderJSON(w, response)
 }
 
 // AllUsers lists all admin users
@@ -267,7 +272,7 @@ func (repo *DBRepo) AllUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	helpers.RenderJSON(w, r, u)
+	helpers.RenderJSON(w, u)
 }
 
 // OneUser displays the add/edit user page
@@ -293,7 +298,7 @@ func (repo *DBRepo) OneUser(w http.ResponseWriter, r *http.Request) {
 		user = u
 	}
 
-	helpers.RenderJSON(w, r, user)
+	helpers.RenderJSON(w, user)
 }
 
 // PostOneUser adds/edits a user
@@ -358,7 +363,7 @@ func (repo *DBRepo) PostOneUser(w http.ResponseWriter, r *http.Request) {
 		jsonResp.Message = "User added"
 	}
 
-	helpers.RenderJSON(w, r, jsonResp)
+	helpers.RenderJSON(w, jsonResp)
 }
 
 // DeleteUser soft deletes a user
@@ -369,7 +374,7 @@ func (repo *DBRepo) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	jsonResp.OK = true
 	jsonResp.Message = "User deleted"
 
-	helpers.RenderJSON(w, r, jsonResp)
+	helpers.RenderJSON(w, jsonResp)
 }
 
 // ClientError will display error page for client error i.e. bad request
@@ -423,7 +428,7 @@ func (repo *DBRepo) Preferences(w http.ResponseWriter, r *http.Request) {
 
 	refs.Preferences = allRefs
 
-	helpers.RenderJSON(w, r, refs)
+	helpers.RenderJSON(w, refs)
 
 }
 
@@ -446,7 +451,7 @@ func (repo *DBRepo) SetSystemPref(w http.ResponseWriter, r *http.Request) {
 
 	repo.App.PreferenceMap["monitoring_live"] = req.PrefValue
 
-	helpers.RenderJSON(w, r, jsonResp)
+	helpers.RenderJSON(w, jsonResp)
 }
 
 // ToggleMonitoring toggles monitoring on/off

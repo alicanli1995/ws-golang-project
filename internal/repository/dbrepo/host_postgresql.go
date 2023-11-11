@@ -164,7 +164,6 @@ func (m *postgresDBRepo) FindHostByID(id int) (models.Host, error) {
 func (m *postgresDBRepo) UpdateHost(h models.Host) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	log.Println(h)
 	query := `
 		UPDATE hosts SET host_name = $1, canonical_name = $2, url = $3, ip = $4, 
 		                 ipv6 = $5, location = $6, os = $7, active = $8, updated_at = $9
@@ -230,55 +229,66 @@ func (m *postgresDBRepo) AllHosts() ([]models.Host, error) {
 		if err != nil {
 			return nil, err
 		}
+		hosts = append(hosts, *s)
+	}
 
-		serviceQuery := `
+	// get all services for host
+
+	query = `
 		SELECT hs.id, hs.host_id, hs.service_id, hs.active, hs.scheduler_number, hs.scheduler_unit,
 		       hs.last_check, hs.status, hs.created_at, hs.updated_at,
-		       s.id, s.service_name, s.active, s.icon, s.created_at, s.updated_at,
-		       hs.last_message
+		       s.id, s.service_name, s.active, s.icon, s.created_at, s.updated_at
 		FROM host_services hs
 		LEFT JOIN services s ON (s.id = hs.service_id)
-		WHERE host_id = $1`
+		ORDER BY s.service_name`
 
-		serviceRows, err := m.DB.QueryContext(ctx, serviceQuery, s.ID)
+	rows, err = m.DB.QueryContext(ctx, query)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(rows)
+
+	var services []models.HostServices
+
+	for rows.Next() {
+		var s models.HostServices
+		err = rows.Scan(
+			&s.ID,
+			&s.HostID,
+			&s.ServiceID,
+			&s.Active,
+			&s.SchedulerNumber,
+			&s.SchedulerUnit,
+			&s.LastCheck,
+			&s.Status,
+			&s.CreatedAt,
+			&s.UpdatedAt,
+			&s.Service.ID,
+			&s.Service.ServiceName,
+			&s.Service.Active,
+			&s.Service.Icon,
+			&s.Service.CreatedAt,
+			&s.Service.UpdatedAt,
+		)
 		if err != nil {
 			log.Println(err)
 			return nil, err
 		}
+		services = append(services, s)
 
-		var services []models.HostServices
-
-		for serviceRows.Next() {
-			var hs models.HostServices
-			err = serviceRows.Scan(
-				&hs.ID,
-				&hs.HostID,
-				&hs.ServiceID,
-				&hs.Active,
-				&hs.SchedulerNumber,
-				&hs.SchedulerUnit,
-				&hs.LastCheck,
-				&hs.Status,
-				&hs.CreatedAt,
-				&hs.UpdatedAt,
-				&hs.Service.ID,
-				&hs.Service.ServiceName,
-				&hs.Service.Active,
-				&hs.Service.Icon,
-				&hs.Service.CreatedAt,
-				&hs.Service.UpdatedAt,
-				&hs.LastMessage,
-			)
-			if err != nil {
-				log.Println(err)
-				return nil, err
+		for i, host := range hosts {
+			if host.ID == s.HostID {
+				hosts[i].HostServices = append(hosts[i].HostServices, s)
 			}
-			services = append(services, hs)
-
-			_ = serviceRows.Close()
 		}
-		s.HostServices = services
-		hosts = append(hosts, *s)
+
 	}
 
 	if err = rows.Err(); err != nil {

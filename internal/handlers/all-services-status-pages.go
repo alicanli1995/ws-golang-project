@@ -14,7 +14,7 @@ func (repo *DBRepo) AllHealthyServices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// return services object to the JSON response
-	helpers.RenderJSON(w, r, services)
+	helpers.RenderJSON(w, services)
 }
 
 // AllWarningServices lists all warning services
@@ -27,7 +27,7 @@ func (repo *DBRepo) AllWarningServices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// return services object to the JSON response
-	helpers.RenderJSON(w, r, services)
+	helpers.RenderJSON(w, services)
 }
 
 // AllProblemServices lists all problem services
@@ -39,7 +39,7 @@ func (repo *DBRepo) AllProblemServices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// return services object to the JSON response
-	helpers.RenderJSON(w, r, services)
+	helpers.RenderJSON(w, services)
 }
 
 // AllPendingServices lists all pending services
@@ -52,5 +52,5 @@ func (repo *DBRepo) AllPendingServices(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// return services object to the JSON response
-	helpers.RenderJSON(w, r, services)
+	helpers.RenderJSON(w, services)
 }

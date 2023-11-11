@@ -234,14 +234,15 @@ type Session struct {
 }
 
 type ComputeTimes struct {
-	ID           string         `json:"id"`
-	DNSDone      time.Duration  `json:"DNSDone"`
-	ConnectTime  time.Duration  `json:"ConnectTime"`
-	TLSHandshake time.Duration  `json:"TLSHandshake"`
-	FirstByte    time.Duration  `json:"FirstByte"`
-	TotalTime    time.Duration  `json:"TotalTime"`
-	Host         Host           `json:"Host"`
-	HostServices []HostServices `json:"HostServices"`
-	CreatedAt    time.Time      `json:"CreatedAt"`
-	UpdatedAt    time.Time      `json:"UpdatedAt"`
+	ID             string        `json:"id"`
+	DNSDone        time.Duration `json:"DNSDone"`
+	ConnectTime    time.Duration `json:"ConnectTime"`
+	TLSHandshake   time.Duration `json:"TLSHandshake"`
+	FirstByte      time.Duration `json:"FirstByte"`
+	TotalTime      time.Duration `json:"TotalTime"`
+	ResponseStatus int           `json:"ResponseStatus"`
+	Host           Host          `json:"Host"`
+	HostServices   HostServices  `json:"HostServices"`
+	CreatedAt      time.Time     `json:"CreatedAt"`
+	UpdatedAt      time.Time     `json:"UpdatedAt"`
 }

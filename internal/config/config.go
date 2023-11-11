@@ -1,8 +1,7 @@
 package config
 
 import (
-	"github.com/alexedwards/scs/v2"
-	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/pusher/pusher-http-go"
 	"github.com/robfig/cron/v3"
 	"golang-observer-project/internal/channeldata"
@@ -13,7 +12,6 @@ import (
 // AppConfig holds application configuration
 type AppConfig struct {
 	DB            *driver.DB
-	Session       *scs.SessionManager
 	InProduction  bool
 	Domain        string
 	MonitorMap    map[int]cron.EntryID

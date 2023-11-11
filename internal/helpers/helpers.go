@@ -29,12 +29,6 @@ func NewHelpers(a *config.AppConfig) {
 	app = a
 }
 
-// IsAuthenticated returns true if a user is authenticated
-func IsAuthenticated(r *http.Request) bool {
-	exists := app.Session.Exists(r.Context(), "userID")
-	return exists
-}
-
 // RandomString returns a random string of letters of length n
 func RandomString(n int) string {
 	b := make([]byte, n)
@@ -66,7 +60,7 @@ func ServerError(w http.ResponseWriter, r *http.Request, err error) {
 	http.ServeFile(w, r, "./ui/static/500.html")
 }
 
-func RenderJSON(w http.ResponseWriter, r *http.Request, data interface{}) {
+func RenderJSON(w http.ResponseWriter, data interface{}) {
 	out, _ := json.MarshalIndent(data, "", "    ")
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(out)
@@ -110,9 +104,13 @@ func ComputeTime(url string) *models.ComputeTimes {
 
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
 	start = time.Now()
-	if _, err := http.DefaultTransport.RoundTrip(req); err != nil {
-		log.Fatal(err)
+	resp, err := http.DefaultTransport.RoundTrip(req)
+	if err != nil {
+		computeTimes.ResponseStatus = 0
+	} else {
+		computeTimes.ResponseStatus = resp.StatusCode
 	}
+
 	computeTimes.TotalTime = time.Since(start)
 
 	return &computeTimes

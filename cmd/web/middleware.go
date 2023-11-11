@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"github.com/go-chi/cors"
-	"golang-observer-project/token"
+	"golang-observer-project/internal/token"
 	"net/http"
 	"strings"
 )

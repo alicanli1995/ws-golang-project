@@ -54,5 +54,5 @@ func (repo *DBRepo) ListEntries(w http.ResponseWriter, r *http.Request) {
 	response.OK = true
 	response.Message = "Schedule entries"
 
-	helpers.RenderJSON(w, r, response)
+	helpers.RenderJSON(w, response)
 }

@@ -2,12 +2,9 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"golang-observer-project/internal/helpers"
 	"golang-observer-project/internal/models"
-	"log"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -44,24 +41,24 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errResp.Message = "Invalid JSON"
 		errResp.OK = false
-		helpers.RenderJSON(w, r, errResp)
+		helpers.RenderJSON(w, errResp)
 	}
 
 	id, _, err := repo.DB.Authenticate(req.Email, req.Password)
 	if errors.Is(err, models.ErrInvalidCredentials) {
 		errResp.Message = "Invalid username or password"
 		errResp.OK = false
-		helpers.RenderJSON(w, r, errResp)
+		helpers.RenderJSON(w, errResp)
 		return
 	} else if errors.Is(err, models.ErrInactiveAccount) {
 		errResp.Message = "Inactive account"
 		errResp.OK = false
-		helpers.RenderJSON(w, r, errResp)
+		helpers.RenderJSON(w, errResp)
 		return
 	} else if err != nil {
 		errResp.Message = "Something went wrong. Please try again later"
 		errResp.OK = false
-		helpers.RenderJSON(w, r, errResp)
+		helpers.RenderJSON(w, errResp)
 		return
 	}
 
@@ -69,7 +66,7 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errResp.Message = "Something went wrong. Please try again later"
 		errResp.OK = false
-		helpers.RenderJSON(w, r, errResp)
+		helpers.RenderJSON(w, errResp)
 		return
 	}
 	duration := 45 * time.Minute
@@ -77,7 +74,7 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errResp.Message = "Something went wrong. Please try again later"
 		errResp.OK = false
-		helpers.RenderJSON(w, r, errResp)
+		helpers.RenderJSON(w, errResp)
 		return
 	}
 
@@ -85,7 +82,7 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errResp.Message = "Something went wrong. Please try again later"
 		errResp.OK = false
-		helpers.RenderJSON(w, r, errResp)
+		helpers.RenderJSON(w, errResp)
 		return
 	}
 
@@ -103,7 +100,7 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errResp.Message = "Something went wrong. Please try again later"
 		errResp.OK = false
-		helpers.RenderJSON(w, r, errResp)
+		helpers.RenderJSON(w, errResp)
 		return
 	}
 
@@ -115,7 +112,7 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 	resp.SessionID = sessions.ID.String()
 	resp.OK = true
 
-	helpers.RenderJSON(w, r, resp)
+	helpers.RenderJSON(w, resp)
 
 }
 
@@ -125,43 +122,4 @@ func newUserResponse(user models.User) createUserResponse {
 		Email:     user.Email,
 		CreatedAt: user.CreatedAt,
 	}
-}
-
-// Logout logs the user out
-func (repo *DBRepo) Logout(w http.ResponseWriter, r *http.Request) {
-
-	// delete the remember me token, if any
-	cookie, err := r.Cookie(fmt.Sprintf("_%s_gowatcher_remember", app.PreferenceMap["identifier"]))
-	if err != nil {
-	} else {
-		key := cookie.Value
-		// have a remember token, so get the token
-		if len(key) > 0 {
-			// key length > 0, so it might be a valid token
-			split := strings.Split(key, "|")
-			hash := split[1]
-			err = repo.DB.DeleteToken(hash)
-			if err != nil {
-				log.Println(err)
-			}
-		}
-	}
-
-	// delete the remember me cookie, if any
-	delCookie := http.Cookie{
-		Name:     fmt.Sprintf("_%s_gowatcher_remember", app.PreferenceMap["identifier"]),
-		Value:    "",
-		Domain:   app.Domain,
-		Path:     "/",
-		MaxAge:   0,
-		HttpOnly: true,
-	}
-	http.SetCookie(w, &delCookie)
-
-	_ = app.Session.RenewToken(r.Context())
-	_ = app.Session.Destroy(r.Context())
-	_ = app.Session.RenewToken(r.Context())
-
-	repo.App.Session.Put(r.Context(), "flash", "You've been logged out successfully!")
-	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

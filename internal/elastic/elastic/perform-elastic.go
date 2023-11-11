@@ -52,7 +52,7 @@ func (elastic *elasticRepo) GetDocumentsByIDAndInLastXMinutes(indexName string, 
 	res, err := esquery.Search().
 		Query(esquery.Bool().
 			Must(esquery.Term("Host.ID", hostID)).
-			Must(esquery.Term("Host.HostServices.ID", serviceID)).
+			Must(esquery.Term("HostServices.ID", serviceID)).
 			Filter(esquery.Range("CreatedAt").
 				Gte("now-"+fmt.Sprintf("%dm", minutes)).Lte("now"))).
 		Size(10000).
@@ -99,19 +99,9 @@ func (elastic *elasticRepo) GetDocumentsByIDAndInLastXMinutes(indexName string, 
 		computeTime.Host.HostName = source["Host"].(map[string]interface{})["HostName"].(string)
 		computeTime.Host.ID = int(source["Host"].(map[string]interface{})["ID"].(float64))
 		computeTime.CreatedAt, _ = time.Parse(time.RFC3339, source["CreatedAt"].(string))
+		computeTime.ResponseStatus = int(source["ResponseStatus"].(float64))
+		computeTime.HostServices.ID = int(source["HostServices"].(map[string]interface{})["ID"].(float64))
 
-		hostServicesList, ok := source["HostServices"].([]interface{})
-		if !ok {
-			return nil, fmt.Errorf("error getting response: %s", res.String())
-		}
-		computeTime.HostServices = make([]models.HostServices, 0)
-		for _, hostService := range hostServicesList {
-			hs := models.HostServices{}
-			hs.SchedulerNumber = int(hostService.(map[string]interface{})["SchedulerNumber"].(float64))
-			hs.SchedulerUnit = hostService.(map[string]interface{})["SchedulerUnit"].(string)
-			hs.ID = int(hostService.(map[string]interface{})["ID"].(float64))
-			computeTime.HostServices = append(computeTime.HostServices, hs)
-		}
 		computeTimes = append(computeTimes, computeTime)
 	}
 

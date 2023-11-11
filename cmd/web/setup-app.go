@@ -3,8 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/alexedwards/scs/postgresstore"
-	"github.com/alexedwards/scs/v2"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/pusher/pusher-http-go"
 	"github.com/robfig/cron/v3"
@@ -14,9 +12,8 @@ import (
 	"golang-observer-project/internal/elastic/elastic"
 	"golang-observer-project/internal/handlers"
 	"golang-observer-project/internal/helpers"
-	"golang-observer-project/token"
+	"golang-observer-project/internal/token"
 	"log"
-	"net/http"
 	"os"
 	"time"
 )
@@ -74,16 +71,6 @@ func setupApp() (*string, error) {
 		log.Fatal("Cannot connect to database!", err)
 	}
 
-	// session
-	log.Printf("Initializing session manager....")
-	session = scs.New()
-	session.Store = postgresstore.New(db.SQL)
-	session.Lifetime = 24 * time.Hour
-	session.Cookie.Persist = true
-	session.Cookie.Name = fmt.Sprintf("gbsession_id_%s", *identifier)
-	session.Cookie.SameSite = http.SameSiteLaxMode
-	session.Cookie.Secure = *inProduction
-
 	// start mail channel
 	log.Println("Initializing mail channel and worker pool....")
 	mailQueue := make(chan channeldata.MailJob, maxWorkerPoolSize)
@@ -96,7 +83,6 @@ func setupApp() (*string, error) {
 	// define application configuration
 	a := config.AppConfig{
 		DB:           db,
-		Session:      session,
 		InProduction: *inProduction,
 		Domain:       *domain,
 		PusherSecret: *pusherSecret,
@@ -133,7 +119,7 @@ func setupApp() (*string, error) {
 	}
 
 	for _, pref := range preferences {
-		preferenceMap[pref.Name] = string(pref.Preference)
+		preferenceMap[pref.Name] = pref.Preference
 	}
 
 	preferenceMap["pusher-host"] = *pusherHost

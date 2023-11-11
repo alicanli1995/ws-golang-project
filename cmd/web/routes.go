@@ -18,11 +18,7 @@ func routes() http.Handler {
 
 	mux.Route("/pusher", func(mux chi.Router) {
 		mux.Use(authMiddleware(handlers.Repo.TokenMaker))
-
-		mux.Post("/auth", handlers.Repo.PusherAuth)
 	})
-
-	mux.Get("/user/logout", handlers.Repo.Logout)
 
 	// admin routes
 	mux.Route("/admin", func(mux chi.Router) {

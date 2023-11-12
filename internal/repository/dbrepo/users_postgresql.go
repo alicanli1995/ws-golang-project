@@ -272,3 +272,34 @@ func (m *postgresDBRepo) UpdatePassword(id int, newPassword string) error {
 
 	return nil
 }
+
+// GetUserByEmail returns a user by email
+func (m *postgresDBRepo) GetUserByEmail(email string) (models.User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	stmt := `SELECT id, first_name, last_name, user_active, access_level, email, password, created_at, updated_at
+			FROM users where email = $1 and deleted_at is null`
+	row := m.DB.QueryRowContext(ctx, stmt, email)
+
+	var u models.User
+
+	err := row.Scan(
+		&u.ID,
+		&u.FirstName,
+		&u.LastName,
+		&u.UserActive,
+		&u.AccessLevel,
+		&u.Email,
+		&u.Password,
+		&u.CreatedAt,
+		&u.UpdatedAt,
+	)
+
+	if err != nil {
+		log.Println(err)
+		return u, err
+	}
+
+	return u, nil
+}

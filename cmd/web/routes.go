@@ -15,6 +15,7 @@ func routes() http.Handler {
 
 	// login
 	mux.Post("/login", handlers.Repo.Login)
+	mux.Post("/register", handlers.Repo.Register)
 
 	mux.Route("/pusher", func(mux chi.Router) {
 		mux.Use(authMiddleware(handlers.Repo.TokenMaker))

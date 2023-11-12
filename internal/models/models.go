@@ -31,7 +31,6 @@ type User struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   time.Time
-	Preferences map[string]string
 }
 
 // User model

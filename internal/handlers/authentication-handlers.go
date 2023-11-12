@@ -14,21 +14,36 @@ type loginUserRequest struct {
 }
 
 type loginUserResponse struct {
-	OK                   bool               `json:"ok"`
-	AccessToken          string             `json:"access_token"`
-	AccessTokenExpiresAt time.Time          `json:"access_token_expires_at"`
-	RefreshToken         string             `json:"refresh_token"`
-	RefreshTokenExpires  time.Time          `json:"refresh_token_expires"`
-	User                 createUserResponse `json:"user"`
-	SessionID            string             `json:"session_id"`
+	OK                   bool                    `json:"ok"`
+	AccessToken          string                  `json:"access_token"`
+	AccessTokenExpiresAt time.Time               `json:"access_token_expires_at"`
+	RefreshToken         string                  `json:"refresh_token"`
+	RefreshTokenExpires  time.Time               `json:"refresh_token_expires"`
+	User                 createUserLoginResponse `json:"user"`
+	SessionID            string                  `json:"session_id"`
 }
 
-type createUserResponse struct {
+type createUserLoginResponse struct {
 	Username         string    `json:"username"`
 	FullName         string    `json:"full_name"`
 	Email            string    `json:"email"`
 	PasswordChangeAt time.Time `json:"password_change_at"`
 	CreatedAt        time.Time `json:"created_at"`
+}
+
+type createUserRequest struct {
+	Name     string `json:"name" binding:"required"`
+	Surname  string `json:"surname" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+func newUserLoginResponse(user models.User) createUserLoginResponse {
+	return createUserLoginResponse{
+		FullName:  user.FirstName + " " + user.LastName,
+		Email:     user.Email,
+		CreatedAt: user.CreatedAt,
+	}
 }
 
 // Login attempts to log the user in
@@ -64,7 +79,7 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 
 	user, err := repo.DB.GetUserById(id)
 	if err != nil {
-		errResp.Message = "Something went wrong. Please try again later"
+		errResp.Message = "DB Getting user by id error"
 		errResp.OK = false
 		helpers.RenderJSON(w, errResp)
 		return
@@ -72,7 +87,7 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 	duration := 45 * time.Minute
 	accessToken, accTokenPayload, err := repo.TokenMaker.CreateToken(user.Email, "ADMIN", duration)
 	if err != nil {
-		errResp.Message = "Something went wrong. Please try again later"
+		errResp.Message = "While creating access token something went wrong."
 		errResp.OK = false
 		helpers.RenderJSON(w, errResp)
 		return
@@ -80,7 +95,7 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 
 	refreshToken, refTokenPayload, err := repo.TokenMaker.CreateToken(user.Email, "ADMIN", duration*24)
 	if err != nil {
-		errResp.Message = "Something went wrong. Please try again later"
+		errResp.Message = "While creating refresh token something went wrong."
 		errResp.OK = false
 		helpers.RenderJSON(w, errResp)
 		return
@@ -98,7 +113,7 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 
 	sessions, err := repo.DB.CreateSession(createSessions)
 	if err != nil {
-		errResp.Message = "Something went wrong. Please try again later"
+		errResp.Message = "While creating session something went wrong."
 		errResp.OK = false
 		helpers.RenderJSON(w, errResp)
 		return
@@ -108,7 +123,7 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 	resp.AccessTokenExpiresAt = accTokenPayload.ExpiredAt
 	resp.RefreshToken = refreshToken
 	resp.RefreshTokenExpires = refTokenPayload.ExpiredAt
-	resp.User = newUserResponse(user)
+	resp.User = newUserLoginResponse(user)
 	resp.SessionID = sessions.ID.String()
 	resp.OK = true
 
@@ -116,10 +131,60 @@ func (repo *DBRepo) Login(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func newUserResponse(user models.User) createUserResponse {
-	return createUserResponse{
-		FullName:  user.FirstName + " " + user.LastName,
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
+// Register attempts to register a new user
+func (repo *DBRepo) Register(w http.ResponseWriter, r *http.Request) {
+	var req createUserRequest
+	var resp jsonResp
+
+	err := helpers.ReadJSONBody(r, &req)
+	if err != nil {
+		resp.Message = "Invalid JSON"
+		resp.OK = false
+		helpers.RenderJSON(w, resp)
+		return
 	}
+
+	user := models.User{
+		FirstName:   req.Name,
+		LastName:    req.Surname,
+		Email:       req.Email,
+		Password:    []byte(req.Password),
+		AccessLevel: 3,
+		UserActive:  1,
+	}
+
+	// check validation for first name and last name
+	if user.FirstName == "" || user.LastName == "" || user.Email == "" || user.Password == nil {
+		resp.Message = "All fields are required"
+		resp.OK = false
+		helpers.RenderJSON(w, resp)
+		return
+	}
+
+	// validate email is already in use
+	user, err = repo.DB.GetUserByEmail(user.Email)
+	if err != nil {
+		resp.Message = "Something went wrong. Please try again later"
+		resp.OK = false
+		helpers.RenderJSON(w, resp)
+		return
+	}
+
+	if user.ID > 0 {
+		resp.Message = "Email address is already in use"
+		resp.OK = false
+		helpers.RenderJSON(w, resp)
+		return
+	}
+
+	_, err = repo.DB.InsertUser(user)
+	if err != nil {
+		resp.Message = "While inserting user something went wrong."
+		resp.OK = false
+		helpers.RenderJSON(w, resp)
+		return
+	}
+
+	resp.OK = true
+	helpers.RenderJSON(w, resp)
 }

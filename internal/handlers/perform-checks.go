@@ -93,6 +93,14 @@ func (repo *DBRepo) broadcastMessage(ch, eventName string, data map[string]strin
 	return err
 }
 
+func (repo *DBRepo) broadcastMessageJsonObject(ch, eventName string, data map[string]interface{}) error {
+	err := repo.App.WsClient.Trigger(ch, eventName, data)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
+}
+
 func (repo *DBRepo) PerformCheck(w http.ResponseWriter, r *http.Request) {
 	hostServiceID, _ := strconv.Atoi(chi.URLParam(r, "id"))
 	oldStatus := chi.URLParam(r, "oldStatus")
@@ -288,11 +296,18 @@ func (repo *DBRepo) testHTTP(url string, h models.Host, hs models.HostServices) 
 
 	resp, err := http.Get(url)
 	if err != nil {
-		_ = repo.addElastic(url, h, hs, err)
+		cpTime, _ := repo.addElastic(url, h, hs)
+		data := make(map[string]interface{})
+		data["service_info"] = cpTime
+		_ = repo.broadcastMessageJsonObject("public-channel", "host-service-check-response", data)
 		return err.Error(), "problem"
 	}
 
-	_ = repo.addElastic(url, h, hs, err)
+	cpTime, _ := repo.addElastic(url, h, hs)
+	data := make(map[string]interface{})
+	data["service_info"] = cpTime
+
+	_ = repo.broadcastMessageJsonObject("public-channel", "host-service-check-response", data)
 
 	defer func(resp *http.Response) {
 		err := resp.Body.Close()
@@ -308,7 +323,7 @@ func (repo *DBRepo) testHTTP(url string, h models.Host, hs models.HostServices) 
 	}
 }
 
-func (repo *DBRepo) addElastic(url string, h models.Host, hs models.HostServices, err error) error {
+func (repo *DBRepo) addElastic(url string, h models.Host, hs models.HostServices) (*models.ComputeTimes, error) {
 	computeTimes := helpers.ComputeTime(url)
 
 	computeTimes.ID = uuid.New().String()
@@ -317,11 +332,11 @@ func (repo *DBRepo) addElastic(url string, h models.Host, hs models.HostServices
 	computeTimes.CreatedAt = time.Now()
 	computeTimes.UpdatedAt = time.Now()
 
-	err = repo.ElasticClient.AddDocument("performances", computeTimes.ID, *computeTimes)
+	err := repo.ElasticClient.AddDocument("performances", computeTimes.ID, *computeTimes)
 	if err != nil {
-		log.Println(err)
+		return nil, err
 	}
-	return err
+	return computeTimes, err
 }
 
 // testHTTPS tests an url with https
@@ -334,11 +349,11 @@ func (repo *DBRepo) testHTTPS(url string, h models.Host, hs models.HostServices)
 
 	resp, err := http.Get(url)
 	if err != nil {
-		_ = repo.addElastic(url, h, hs, err)
+		_, _ = repo.addElastic(url, h, hs)
 		return err.Error(), "problem"
 	}
 
-	_ = repo.addElastic(url, h, hs, err)
+	_, _ = repo.addElastic(url, h, hs)
 
 	defer func(resp *http.Response) {
 		err := resp.Body.Close()

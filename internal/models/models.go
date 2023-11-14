@@ -10,7 +10,7 @@ import (
 
 var (
 	// ErrNoRecord no record found in database error
-	ErrNoRecord = errors.New("models: no matching record found")
+	ErrNoRecord = errors.New("sql: no rows in result set")
 	// ErrInvalidCredentials invalid username/password error
 	ErrInvalidCredentials = errors.New("models: invalid credentials")
 	// ErrDuplicateEmail duplicate email error

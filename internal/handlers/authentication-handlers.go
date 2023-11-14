@@ -162,15 +162,8 @@ func (repo *DBRepo) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// validate email is already in use
-	user, err = repo.DB.GetUserByEmail(user.Email)
-	if err != nil {
-		resp.Message = "Something went wrong. Please try again later"
-		resp.OK = false
-		helpers.RenderJSON(w, resp)
-		return
-	}
-
-	if user.ID > 0 {
+	usr, _ := repo.DB.GetUserByEmail(user.Email)
+	if usr.ID > 0 {
 		resp.Message = "Email address is already in use"
 		resp.OK = false
 		helpers.RenderJSON(w, resp)

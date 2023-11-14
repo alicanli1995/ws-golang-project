@@ -3,6 +3,7 @@ package dbrepo
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"golang-observer-project/internal/models"
 	"golang.org/x/crypto/bcrypt"
 	"log"
@@ -94,7 +95,7 @@ func (m *postgresDBRepo) Authenticate(email, testPassword string) (int, string, 
 
 	row := m.DB.QueryRowContext(ctx, query, email)
 	err := row.Scan(&id, &hashedPassword, &userActive)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return 0, "", models.ErrInvalidCredentials
 	} else if err != nil {
 		log.Println(err)
@@ -102,7 +103,7 @@ func (m *postgresDBRepo) Authenticate(email, testPassword string) (int, string, 
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(testPassword))
-	if err == bcrypt.ErrMismatchedHashAndPassword {
+	if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 		return 0, "", models.ErrInvalidCredentials
 	} else if err != nil {
 		log.Println(err)
@@ -115,44 +116,6 @@ func (m *postgresDBRepo) Authenticate(email, testPassword string) (int, string, 
 
 	// Otherwise, the password is correct. Return the user ID and hashed password.
 	return id, hashedPassword, nil
-}
-
-// InsertRememberMeToken inserts a remember me token into remember_tokens for a user
-func (m *postgresDBRepo) InsertRememberMeToken(id int, token string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	stmt := "insert into remember_tokens (user_id, remember_token) values ($1, $2)"
-	_, err := m.DB.ExecContext(ctx, stmt, id, token)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// DeleteToken deletes a remember me token
-func (m *postgresDBRepo) DeleteToken(token string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	stmt := "delete from remember_tokens where remember_token = $1"
-	_, err := m.DB.ExecContext(ctx, stmt, token)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// CheckForToken checks for a valid remember me token
-func (m *postgresDBRepo) CheckForToken(id int, token string) bool {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-
-	stmt := "SELECT id  FROM remember_tokens where user_id = $1 and remember_token = $2"
-	row := m.DB.QueryRowContext(ctx, stmt, id, token)
-	err := row.Scan(&id)
-	return err == nil
 }
 
 // Insert method to add a new record to the users table.
@@ -260,13 +223,6 @@ func (m *postgresDBRepo) UpdatePassword(id int, newPassword string) error {
 	_, err = m.DB.ExecContext(ctx, stmt, hashedPassword, id)
 	if err != nil {
 		log.Println(err)
-		return err
-	}
-
-	// delete all remember tokens, if any
-	stmt = "delete from remember_tokens where user_id = $1"
-	_, err = m.DB.ExecContext(ctx, stmt, id)
-	if err != nil {
 		return err
 	}
 

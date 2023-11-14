@@ -155,6 +155,77 @@ func (m *postgresDBRepo) FindHostByID(id int) (models.Host, error) {
 		return host, err
 	}
 
+	var allServices []models.Services
+
+	query = `
+		SELECT id, service_name, active, icon, created_at, updated_at
+		FROM services ORDER BY service_name`
+
+	rows, err = m.DB.QueryContext(ctx, query)
+	if err != nil {
+		log.Println(err)
+		return host, err
+	}
+
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(rows)
+
+	for rows.Next() {
+		var s models.Services
+		err = rows.Scan(
+			&s.ID,
+			&s.ServiceName,
+			&s.Active,
+			&s.Icon,
+			&s.CreatedAt,
+			&s.UpdatedAt,
+		)
+		if err != nil {
+			log.Println(err)
+			return host, err
+		}
+		allServices = append(allServices, s)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Println(err)
+		return host, err
+	}
+
+	if len(allServices) > len(services) {
+		var newServices []models.Services
+		for _, service := range allServices {
+			var found bool
+			for _, hs := range services {
+				if service.ID == hs.Service.ID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				newServices = append(newServices, service)
+			}
+		}
+
+		for _, service := range newServices {
+			stmt := `
+		INSERT INTO host_services (host_id, service_id, active, scheduler_number, scheduler_unit,
+		                           status, created_at, updated_at) VALUES
+		                           ($1, $2, 0, 3, 'm', 'pending' , $3, $4)`
+
+			_, err = m.DB.ExecContext(ctx, stmt, host.ID, service.ID, time.Now(), time.Now())
+			if err != nil {
+				log.Println(err)
+				return host, err
+			}
+		}
+
+	}
+
 	host.HostServices = services
 
 	return host, nil

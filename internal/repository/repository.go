@@ -18,9 +18,6 @@ type DatabaseRepo interface {
 	UpdatePassword(id int, newPassword string) error
 	Authenticate(email, testPassword string) (int, string, error)
 	AllUsers() ([]*models.User, error)
-	InsertRememberMeToken(id int, token string) error
-	DeleteToken(token string) error
-	CheckForToken(id int, token string) bool
 	GetUserByEmail(email string) (models.User, error)
 
 	// hosts

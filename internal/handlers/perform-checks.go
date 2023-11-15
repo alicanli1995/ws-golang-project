@@ -171,7 +171,7 @@ func (repo *DBRepo) testServiceForHost(h models.Host, hs models.HostServices) (s
 		msg, newStatus = repo.testHTTPS(h.URL, h, hs)
 		break
 	case SSLCertificate:
-		msg, newStatus = repo.testSSLCert(h.URL)
+		msg, newStatus = repo.testSSLCert(h.URL, h, hs)
 		break
 	}
 
@@ -353,7 +353,11 @@ func (repo *DBRepo) testHTTPS(url string, h models.Host, hs models.HostServices)
 		return err.Error(), "problem"
 	}
 
-	_, _ = repo.addElastic(url, h, hs)
+	cpTime, _ := repo.addElastic(url, h, hs)
+	data := make(map[string]interface{})
+	data["service_info"] = cpTime
+
+	_ = repo.broadcastMessageJsonObject("public-channel", "host-service-check-response", data)
 
 	defer func(resp *http.Response) {
 		err := resp.Body.Close()
@@ -369,7 +373,7 @@ func (repo *DBRepo) testHTTPS(url string, h models.Host, hs models.HostServices)
 	}
 }
 
-func (repo *DBRepo) testSSLCert(url string) (string, string) {
+func (repo *DBRepo) testSSLCert(url string, h models.Host, hs models.HostServices) (string, string) {
 	if strings.HasPrefix(url, "https://") {
 		url = strings.Replace(url, "https://", "", -1)
 	}

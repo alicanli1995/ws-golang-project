@@ -62,9 +62,15 @@ func (repo *DBRepo) updateHostServiceStatusCount(h models.Host, hs models.HostSe
 	// update the status and last check time
 	hs.Status = newStatus
 	hs.LastMessage = msg
-	hs.LastCheck = time.Now()
+	location, err := time.LoadLocation("Europe/Istanbul")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	locationNow := time.Now().In(location)
+	hs.LastCheck = locationNow
 
-	err := repo.DB.UpdateHostService(hs)
+	err = repo.DB.UpdateHostService(hs)
 	if err != nil {
 		log.Println(err)
 		return
@@ -127,7 +133,13 @@ func (repo *DBRepo) PerformCheck(w http.ResponseWriter, r *http.Request) {
 	// update the status and last check time
 	hs.Status = newStatus
 	hs.LastMessage = msg
-	hs.LastCheck = time.Now()
+
+	location, err := time.LoadLocation("Europe/Istanbul")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	hs.LastCheck = time.Now().In(location)
 
 	err = repo.DB.UpdateHostService(hs)
 	if err != nil {
@@ -276,7 +288,14 @@ func (repo *DBRepo) pushScheduleChangeEvent(hs models.HostServices, newStatus st
 	} else {
 		data["next_run"] = "Pending..."
 	}
-	data["last_run"] = time.Now().Format("2006-01-02 15:04:05")
+	location, err := time.LoadLocation("Europe/Istanbul")
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	locationNow := time.Now().In(location)
+
+	data["last_run"] = locationNow.Format("2006-01-02 15:04:05")
 	data["host"] = hs.HostName
 	data["service"] = hs.Service.ServiceName
 	data["schedule"] = fmt.Sprintf("@every %d%s", hs.SchedulerNumber, hs.SchedulerUnit)

@@ -1,1 +1,0 @@
-drop column("host_services", "status")
